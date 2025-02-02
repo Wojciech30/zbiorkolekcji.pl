@@ -1,31 +1,101 @@
-import { createRouter, createWebHistory } from 'vue-router';
-
-import HomeView from '@/views/HomeView.vue';
-import LoginView from '@/views/LoginView.vue';
-import RegisterView from '@/views/RegisterView.vue';
-import MyCollectionsView from '@/views/MyCollectionsView.vue';
+import { createRouter, createWebHistory } from "vue-router";
+import store from "@/store";
 
 const routes = [
-    { path: '/', component: HomeView },
-    { path: '/login', component: LoginView },
-    { path: '/register', component: RegisterView },
-    { path: '/moje-kolekcje', component: MyCollectionsView, meta: { requiresAuth: true }},
+    {
+        path: "/",
+        name: "Home",
+        component: () => import("@/views/HomeView.vue"),
+        meta: { access: "public" }
+    },
+    {
+        path: "/login",
+        name: "Login",
+        component: () => import("@/views/LoginView.vue"),
+        meta: { access: "guest", hideForAuth: true }
+    },
+    {
+        path: "/register",
+        name: "Register",
+        component: () => import("@/views/RegisterView.vue"),
+        meta: { access: "guest", hideForAuth: true }
+    },
+    {
+        path: "/profile",
+        name: "Profile",
+        component: () => import("@/views/ProfileView.vue"),
+        meta: { access: "user" }
+    },
+    {
+        path: "/moje-kolekcje",
+        name: "MyCollections",
+        component: () => import("@/views/CollectionsView.vue"),
+        meta: { access: "user" }
+    },
+    {
+        path: "/collections",
+        name: "PublicCollections",
+        component: () => import("@/views/CollectionsView.vue"),
+        meta: { access: "public" }
+    },
+    {
+        path: "/collections/:id",
+        name: "SingleCollection",
+        component: () => import("@/views/SingleCollectionView.vue"),
+        meta: { access: "public" },
+        props: true
+    },
+    {
+        path: "/categories/:id",
+        name: "Category",
+        component: () => import("@/views/CategoryView.vue"),
+        meta: { access: "public" },
+        props: true
+    },
+    {
+        path: "/admin",
+        name: "AdminPanel",
+        component: () => import("@/views/AdminPanelView.vue"),
+        meta: { access: "admin" }
+    },
+    {
+        path: "/:pathMatch(.*)*",
+        name: "NotFound",
+        component: () => import("@/views/NotFoundView.vue"),
+        meta: { access: "public" }
+    }
 ];
 
 const router = createRouter({
     history: createWebHistory(),
     routes,
+    scrollBehavior(to, from, savedPosition) {
+        return savedPosition || { top: 0 };
+    }
 });
 
-router.beforeEach((to, from, next) => {
-    const isLoggedIn = !!localStorage.getItem('token');
+router.beforeEach(async (to, from, next) => {
+    const requiresAuth = to.matched.some(record => record.meta.access === 'user' || record.meta.access === 'admin');
+    const requiresAdmin = to.matched.some(record => record.meta.access === 'admin');
+    const isAuthenticated = store.getters['auth/isAuthenticated'];
+    const isAdmin = store.getters['auth/isAdmin'];
 
-    if (to.meta.requiresAuth && !isLoggedIn) {
-        return next('/login'); // Przekierowanie do logowania
+    if (to.meta.access === 'guest' && isAuthenticated) {
+        return next({ name: 'Home' });
+    }
+
+    if (requiresAuth && !isAuthenticated) {
+        return next({
+            name: 'Login',
+            query: { redirect: to.fullPath }
+        });
+    }
+
+    if (requiresAdmin && !isAdmin) {
+        return next({ name: 'Home' });
     }
 
     next();
 });
-
 
 export default router;

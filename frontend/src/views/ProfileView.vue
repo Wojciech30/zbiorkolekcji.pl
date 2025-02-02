@@ -12,78 +12,38 @@
         <div class="mt-4">
           <label for="firstName" class="block">Imię:</label>
           <input
-              v-model="user.firstName"
+              v-model="firstName"
               type="text"
               id="firstName"
               class="w-full p-2 border rounded"
+              :class="{ 'border-red-500': errors.firstName }"
           />
+          <p v-if="errors.firstName" class="text-red-500 text-sm">{{ errors.firstName }}</p>
         </div>
         <div class="mt-4">
           <label for="lastName" class="block">Nazwisko:</label>
           <input
-              v-model="user.lastName"
+              v-model="lastName"
               type="text"
               id="lastName"
               class="w-full p-2 border rounded"
+              :class="{ 'border-red-500': errors.lastName }"
           />
+          <p v-if="errors.lastName" class="text-red-500 text-sm">{{ errors.lastName }}</p>
         </div>
         <div class="mt-4">
           <label for="email" class="block">Adres e-mail:</label>
           <input
-              v-model="user.email"
+              v-model="email"
               type="email"
               id="email"
               class="w-full p-2 border rounded"
+              :class="{ 'border-red-500': errors.email }"
           />
+          <p v-if="errors.email" class="text-red-500 text-sm">{{ errors.email }}</p>
         </div>
-        <button
-            type="submit"
-            class="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
+        <button type="submit" class="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600">
           Zapisz zmiany
-        </button>
-      </form>
-    </section>
-
-    <!-- Formularz zmiany hasła -->
-    <section class="mt-8">
-      <h2 class="text-2xl font-semibold">Zmień hasło</h2>
-      <form @submit.prevent="changePassword">
-        <div class="mt-4">
-          <label for="currentPassword" class="block">Obecne hasło:</label>
-          <input
-              v-model="passwords.currentPassword"
-              type="password"
-              id="currentPassword"
-              class="w-full p-2 border rounded"
-              required
-          />
-        </div>
-        <div class="mt-4">
-          <label for="newPassword" class="block">Nowe hasło:</label>
-          <input
-              v-model="passwords.newPassword"
-              type="password"
-              id="newPassword"
-              class="w-full p-2 border rounded"
-              required
-          />
-        </div>
-        <div class="mt-4">
-          <label for="confirmPassword" class="block">Potwierdź nowe hasło:</label>
-          <input
-              v-model="passwords.confirmPassword"
-              type="password"
-              id="confirmPassword"
-              class="w-full p-2 border rounded"
-              required
-          />
-        </div>
-        <button
-            type="submit"
-            class="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Zmień hasło
         </button>
       </form>
     </section>
@@ -91,61 +51,45 @@
 </template>
 
 <script>
-import UserService from "@/services/UserService";
+import AuthService from "@/services/AuthService";
+import { useForm, useField } from "vee-validate";
+import * as yup from "yup";
+import { useToast } from "vue-toastification";
 
 export default {
-  name: "ProfileView",
-  data() {
-    return {
-      user: {
-        firstName: "",
-        lastName: "",
-        email: "",
-      },
-      passwords: {
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      },
-    };
-  },
-  async mounted() {
-    try {
-      const response = await UserService.getUserProfile();
-      this.user = response.data;
-    } catch (error) {
-      console.error("Błąd pobierania danych użytkownika:", error);
-    }
-  },
-  methods: {
-    async updateProfile() {
+  setup() {
+    const toast = useToast(); // Obsługa powiadomień
+
+    // Walidacja formularza
+    const schema = yup.object({
+      firstName: yup.string().required("Imię jest wymagane."),
+      lastName: yup.string().required("Nazwisko jest wymagane."),
+      email: yup.string().email("Podaj poprawny adres email.").required("Email jest wymagany."),
+    });
+
+    const { handleSubmit, errors } = useForm({ validationSchema: schema });
+    const { value: firstName } = useField("firstName");
+    const { value: lastName } = useField("lastName");
+    const { value: email } = useField("email");
+
+    // Aktualizacja profilu użytkownika
+    const updateProfile = handleSubmit(async (values) => {
       try {
-        await UserService.updateUserProfile(this.user);
-        alert("Profil został zaktualizowany.");
+        await AuthService.updateProfile(values);
+        toast.success("Profil został zaktualizowany.");
       } catch (error) {
         console.error("Błąd aktualizacji profilu:", error);
+        toast.error("Nie udało się zaktualizować profilu.");
       }
-    },
-    async changePassword() {
-      if (this.passwords.newPassword !== this.passwords.confirmPassword) {
-        alert("Nowe hasła nie są zgodne.");
-        return;
-      }
-      try {
-        await UserService.changePassword(this.passwords);
-        alert("Hasło zostało zmienione.");
-        this.passwords = {
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        };
-      } catch (error) {
-        console.error("Błąd zmiany hasła:", error);
-      }
-    },
+    });
+
+    return {
+      firstName,
+      lastName,
+      email,
+      errors,
+      updateProfile,
+    };
   },
 };
 </script>
-
-<style>
-</style>

@@ -1,72 +1,106 @@
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import User from '../models/User.js';
-import authenticateToken from '../middleware/authenticateToken.js'; // Poprawny import
+import express from "express";
+import User from "../models/User.js";
+import authenticateToken from "../middleware/authenticateToken.js";
+import adminCheck from "../middleware/checkAdmin.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || "defaultsecret";
+const TOKEN_EXPIRATION = "2h";
 
-// Klucz JWT (powinien być przechowywany w zmiennych środowiskowych)
-const JWT_SECRET = 'secretkey'; // Zmień na zmienną środowiskową w produkcji
-
-// Rejestracja użytkownika
-router.post('/register', async (req, res) => {
+// Rejestracja
+router.post("/register", async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, password, email } = req.body;
 
-        // Sprawdź, czy użytkownik już istnieje
-        const existingUser = await User.findOne({ username });
-        if (existingUser) {
-            return res.status(400).send({ error: 'Nazwa użytkownika jest zajęta' });
-        }
-
-        // Hashowanie hasła
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Tworzenie nowego użytkownika
-        const user = new User({
-            username,
-            email,
-            password: hashedPassword,
+        const existingUser = await User.findOne({
+            $or: [{ username }, { email }]
         });
 
-        await user.save();
-        res.status(201).send({ message: 'Użytkownik został zarejestrowany' });
+        if (existingUser) {
+            return res.status(409).json({
+                error: "Nazwa użytkownika lub email już istnieje",
+                code: "USER_EXISTS"
+            });
+        }
+
+        const newUser = await User.create({
+            username,
+            password,
+            email
+        });
+
+        res.status(201).json(newUser.toProfile());
     } catch (error) {
-        res.status(500).send({ error: error.message });
+        res.status(400).json({
+            error: "Błąd walidacji danych",
+            details: error.errors
+        });
     }
 });
 
-// Logowanie użytkownika
-router.post('/login', async (req, res) => {
+// Logowanie
+router.post("/login", async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // Znajdź użytkownika
-        const user = await User.findOne({ username });
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).send({ error: 'Nieprawidłowe dane logowania' });
+        const user = await User.findOne({ username })
+            .select("+password")
+            .exec();
+
+        if (!user || !(await user.comparePassword(password))) {
+            return res.status(401).json({
+                error: "Nieprawidłowe dane logowania",
+                code: "INVALID_CREDENTIALS"
+            });
         }
 
-        // Generowanie tokena JWT
-        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(
+            { id: user._id, role: user.role },
+            JWT_SECRET,
+            { expiresIn: TOKEN_EXPIRATION }
+        );
 
-        res.send({ token });
+        await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+        res.json({
+            token,
+            expiresIn: 7200, // 2h w sekundach
+            user: user.toProfile()
+        });
     } catch (error) {
-        res.status(500).send({ error: error.message });
+        res.status(500).json({
+            error: "Błąd serwera podczas logowania",
+            code: "LOGIN_ERROR"
+        });
     }
 });
 
-// Endpoint profilu użytkownika
-router.get('/me', authenticateToken, async (req, res) => {
+// Profil użytkownika
+router.get("/me", authenticateToken, (req, res) => {
+    res.json(req.user.toProfile());
+});
+
+// Zarządzanie użytkownikami (tylko admin)
+router.get("/users", authenticateToken, adminCheck, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password'); // Pomijamy hasło
-        if (!user) {
-            return res.status(404).send({ error: 'Użytkownik nie istnieje' });
-        }
-        res.send(user);
+        const users = await User.find()
+            .sort("-createdAt")
+            .lean();
+
+        res.json(users.map(u => ({
+            id: u._id,
+            username: u.username,
+            email: u.email,
+            role: u.role,
+            createdAt: u.createdAt
+        })));
     } catch (error) {
-        res.status(500).send({ error: error.message });
+        res.status(500).json({
+            error: "Błąd pobierania użytkowników",
+            code: "USER_FETCH_ERROR"
+        });
     }
 });
 

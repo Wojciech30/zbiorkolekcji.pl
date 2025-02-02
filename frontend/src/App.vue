@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <!-- Nagłówek -->
-    <Header />
+    <AppHeader />
     <!-- Dynamiczne wstawianie widoków w zależności od trasy -->
     <router-view />
     <!-- Stopka (opcjonalna) -->
@@ -12,12 +12,19 @@
 </template>
 
 <script>
-import AppHeader from './components/AppHeader.vue'; // Nagłówek aplikacji
+import AppHeader from "./components/AppHeader.vue"; // Nagłówek aplikacji
+import { mapActions } from "vuex";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
-    Header: AppHeader,
+    AppHeader,
+  },
+  created() {
+    this.fetchProfile();
+  },
+  methods: {
+    ...mapActions(["fetchProfile"]),
   },
 };
 </script>

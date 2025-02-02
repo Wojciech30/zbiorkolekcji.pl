@@ -1,83 +1,72 @@
 <template>
-  <div class="container mx-auto p-4">
-    <header>
-      <h1 class="text-4xl font-bold text-center">Logowanie</h1>
-      <p class="text-center text-gray-600">Wprowadź swoje dane, aby się zalogować.</p>
-    </header>
-
-    <!-- Formularz logowania -->
-    <section class="mt-8 max-w-md mx-auto">
-      <form @submit.prevent="login">
-        <div class="mt-4">
-          <label for="username" class="block">Nazwa użytkownika:</label>
-          <input
-              v-model="credentials.username"
-              type="text"
-              id="username"
-              class="w-full p-2 border rounded"
-              required
-          />
-        </div>
-        <div class="mt-4 relative">
-          <label for="password" class="block">Hasło:</label>
-          <input
-              v-model="credentials.password"
-              :type="showPassword ? 'text' : 'password'"
-              id="password"
-              class="w-full p-2 border rounded"
-              required
-          />
-          <button
-              type="button"
-              @click="togglePasswordVisibility"
-              class="absolute right-2 top-9 text-gray-600 hover:text-gray-800"
-          >
-            <span v-if="showPassword">Ukryj</span>
-            <span v-else>Pokaż</span>
-          </button>
-        </div>
-        <button
-            type="submit"
-            class="mt-6 w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Zaloguj się
-        </button>
-      </form>
-    </section>
+  <div>
+    <h1 class="text-3xl font-bold text-center mb-6">Logowanie</h1>
+    <form @submit.prevent="loginUser" class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
+      <div>
+        <label for="username" class="block font-bold">Nazwa użytkownika</label>
+        <input
+            v-model="username"
+            id="username"
+            type="text"
+            class="border w-full p-2 rounded"
+            :class="{ 'border-red-500': errors.username }"
+        />
+        <p v-if="errors.username" class="text-red-500 text-sm">{{ errors.username }}</p>
+      </div>
+      <div>
+        <label for="password" class="block font-bold">Hasło</label>
+        <input
+            v-model="password"
+            id="password"
+            type="password"
+            class="border w-full p-2 rounded"
+            :class="{ 'border-red-500': errors.password }"
+        />
+        <p v-if="errors.password" class="text-red-500 text-sm">{{ errors.password }}</p>
+      </div>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">
+        Zaloguj się
+      </button>
+    </form>
   </div>
 </template>
 
 <script>
-import AuthService from "@/services/AuthService";
+import { useForm, useField } from "vee-validate";
+import * as yup from "yup";
+import { useToast } from "vue-toastification";
+import { useRouter } from "vue-router";
+import { useStore } from "vuex";
 
 export default {
   name: "LoginView",
-  data() {
-    return {
-      credentials: {
-        username: "",
-        password: "",
-      },
-      showPassword: false,
-    };
-  },
-  methods: {
-    togglePasswordVisibility() {
-      this.showPassword = !this.showPassword;
-    },
-    async login() {
+  setup() {
+    const toast = useToast();
+    const router = useRouter();
+    const store = useStore();
+
+    // Rozszerzona walidacja
+    const schema = yup.object({
+      username: yup.string().required("Nazwa użytkownika jest wymagana"),
+      password: yup.string()
+          .required("Hasło jest wymagane")
+    });
+
+    const { handleSubmit, errors } = useForm({ validationSchema: schema });
+    const { value: username } = useField("username");
+    const { value: password } = useField("password");
+
+    const loginUser = handleSubmit(async (values) => {
       try {
-        const response = await AuthService.login(this.credentials);
-        localStorage.setItem("token", response.data.token);
-        this.$router.push("/"); // Przekierowanie na stronę główną
+        await store.dispatch("auth/login", values);
+        toast.success("Zalogowano pomyślnie!");
+        await router.push({name: "Home"});
       } catch (error) {
-        console.error("Błąd logowania:", error);
-        alert("Nieprawidłowa nazwa użytkownika lub hasło.");
+        toast.error(error.message || "Błąd serwera");
       }
-    },
-  },
+    });
+
+    return { username, password, errors, loginUser };
+  }
 };
 </script>
-
-<style>
-</style>

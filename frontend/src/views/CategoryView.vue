@@ -32,7 +32,6 @@ import CategoryService from "@/services/CategoryService";
 import CollectionService from "@/services/CollectionService";
 
 export default {
-  name: "CategoryView",
   data() {
     return {
       category: {},
@@ -43,22 +42,17 @@ export default {
   async mounted() {
     try {
       const categoryId = this.$route.params.id;
-
-      // Pobieranie danych kategorii
       const categoryResponse = await CategoryService.getCategory(categoryId);
       this.category = categoryResponse.data;
 
-      // Pobieranie kolekcji przypisanych do tej kategorii
       const collectionsResponse = await CollectionService.getCollectionsByCategory(categoryId);
       this.collections = collectionsResponse.data;
     } catch (error) {
       console.error("Błąd pobierania danych:", error);
+      this.$toast.error("Nie udało się załadować danych kategorii.");
     } finally {
       this.isLoading = false;
-    }  },
+    }
+  },
 };
 </script>
-
-<style>
-/* Dostosowane style */
-</style>

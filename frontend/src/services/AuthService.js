@@ -1,13 +1,36 @@
-import apiClient from "@/services/apiClient";
+import apiClient from './apiClient';
 
 export default {
-    async login(credentials) {
-        return apiClient.post("auth/login", credentials);
+    register(userData) {
+        return apiClient.post('/auth/register', userData);
     },
-    async register(userData) {
-        return apiClient.post("/auth/register", userData);
+
+    login(credentials) {
+        return apiClient.post('/auth/login', credentials)
+            .then(response => ({
+                accessToken: response.data.accessToken,
+                refreshToken: response.data.refreshToken,
+                user: response.data.user
+            }));
     },
-    async getProfile() {
-        return apiClient.get("/auth/profile");
+
+    getProfile() {
+        return apiClient.get('/auth/profile');
     },
+
+    updateProfile(profileData) {
+        return apiClient.patch('/auth/profile', profileData);
+    },
+
+    changePassword(passwordData) {
+        return apiClient.post('/auth/change-password', passwordData);
+    },
+
+    refreshToken(refreshToken) { // ✅ Parametr przekazywany z store
+        return apiClient.post('/auth/refresh', { refreshToken });
+    },
+
+    logout(refreshToken) { //
+        return apiClient.post('/auth/logout', { refreshToken });
+    }
 };

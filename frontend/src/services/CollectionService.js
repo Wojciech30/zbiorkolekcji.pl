@@ -1,19 +1,45 @@
 import apiClient from './apiClient';
 
 export default {
-    getCollections() {
-        return apiClient.get('/collections');
+    getCollections(params = {}) {
+        return apiClient.get('/collections', {
+            params: {
+                page: 1,
+                limit: 10,
+                ...params
+            }
+        });
     },
+
     getCollection(id) {
         return apiClient.get(`/collections/${id}`);
     },
-    addCollection(collection) {
-        return apiClient.post('/collections', collection);
+
+    createCollection(collectionData) {
+        return apiClient.post('/collections', collectionData);
     },
-    updateCollection(id, collection) {
-        return apiClient.patch(`/collections/${id}`, collection);
+
+    updateCollection(id, updates) {
+        return apiClient.patch(`/collections/${id}`, updates);
     },
+
     deleteCollection(id) {
         return apiClient.delete(`/collections/${id}`);
     },
+
+    getPopularCollections() {
+        return apiClient.get('/collections/special/popular');
+    },
+
+    getUserCollections(userId) {
+        return apiClient.get(`/users/${userId}/collections`);
+    },
+
+    searchCollections(query) {
+        return apiClient.get('/collections/search', { params: { q: query } });
+    },
+
+    getCollectionStats(id) {
+        return apiClient.get(`/collections/${id}/stats`);
+    }
 };

@@ -1,7 +1,19 @@
 module.exports = {
-  content: ['./public/index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  content: [
+    "./src/**/*.{vue,js,ts,jsx,tsx}",
+    "./public/index.html"
+  ],
+  darkMode: 'class', // lub 'media'
   theme: {
-    extend: {},
+    extend: {
+      spacing: {
+        '128': '32rem'
+      }
+    },
   },
-  plugins: [],
-};
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/aspect-ratio')
+  ],
+}

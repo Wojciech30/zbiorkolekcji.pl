@@ -3,11 +3,6 @@
     <header class="text-center">
       <h1 class="text-4xl font-bold">Witaj w Zbiór Kolekcji</h1>
       <p class="text-gray-600">Twórz, zarządzaj i dziel się swoimi kolekcjami.</p>
-      <div class="mt-4">
-        <router-link to="/register" class="text-blue-500 hover:underline">Zarejestruj się</router-link>
-        <span class="mx-2">|</span>
-        <router-link to="/login" class="text-blue-500 hover:underline">Zaloguj się</router-link>
-      </div>
     </header>
 
     <!-- Wyszukiwarka -->
@@ -20,16 +15,15 @@
             placeholder="Wyszukaj kategorię..."
             class="flex-1 p-2 border rounded"
         />
-        <button @click="search" class="p-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-          Szukaj
-        </button>
       </div>
     </section>
+
 
     <!-- Kategorie -->
     <section class="mt-8">
       <h2 class="text-2xl font-semibold">Kategorie</h2>
       <div v-if="isLoading" class="text-center">Ładowanie danych...</div>
+      <div v-else-if="categories.length === 0" class="text-center">Brak kategorii do wyświetlenia.</div>
       <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
         <div
             v-for="category in filteredCategories"
@@ -48,6 +42,7 @@
     <section class="mt-8">
       <h2 class="text-2xl font-semibold">Najpopularniejsze Kolekcje</h2>
       <div v-if="isLoading" class="text-center">Ładowanie danych...</div>
+      <div v-else-if="popularCollections.length === 0" class="text-center">Brak kolekcji do wyświetlenia.</div>
       <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
         <div
             v-for="collection in popularCollections"
@@ -80,32 +75,40 @@ export default {
   },
   computed: {
     filteredCategories() {
-      return this.categories.filter(category =>
+      if (!this.searchQuery.trim()) {
+        return this.categories;
+      }
+      return this.categories.filter((category) =>
           category.name.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     },
   },
   async mounted() {
     try {
-      const categoryResponse = await CategoryService.getCategories();
-      this.categories = categoryResponse.data;
+      // Pobieranie kategorii
+      try {
+        const categoryResponse = await CategoryService.getCategories();
+        this.categories = categoryResponse.data.categories;
+      } catch (error) {
+        console.error("Błąd pobierania kategorii:", error);
+        this.$toast.error("Nie udało się załadować kategorii.");
+      }
 
-      const collectionResponse = await CollectionService.getPopularCollections();
-      this.popularCollections = collectionResponse.data;
-    } catch (error) {
-      console.error("Błąd pobierania danych:", error);
+      // Pobieranie najpopularniejszych kolekcji
+      try {
+        const collectionResponse = await CollectionService.getCollections();
+        this.popularCollections = collectionResponse.data.collections;
+      } catch (error) {
+        console.error("Błąd pobierania kolekcji:", error);
+        this.$toast.error("Nie udało się załadować kolekcji.");
+      }
     } finally {
       this.isLoading = false;
     }
-  },
-  methods: {
-    search() {
-      console.log("Szukam:", this.searchQuery);
-    },
   },
 };
 </script>
 
 <style>
-/* Dostosowane style, jeśli są potrzebne */
+/* Dostosowane style */
 </style>
