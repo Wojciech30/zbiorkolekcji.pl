@@ -18,6 +18,6 @@ configure({
 
 createApp(App)
     .use(router)
-    .use(store) // Dodanie Vuex do aplikacji
-    .use(Toaster) // Dodanie globalnych powiadomień
+    .use(store)
+    .use(Toaster)
     .mount('#app');

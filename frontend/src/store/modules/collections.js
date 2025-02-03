@@ -8,36 +8,35 @@ export default {
         publicCollections: []
     }),
     mutations: {
-        SET_USER_COLLECTIONS(state, collections) {
-            state.userCollections = collections;
+        ADD_COLLECTION(state, collection) {
+            state.userCollections.push(collection);
         },
-        SET_COLLECTION_STATS(state, { itemsCount, views }) {
-            state.currentCollection = {
-                ...state.currentCollection,
-                itemsCount,
-                views
-            };
+        UPDATE_COLLECTION(state, updatedCollection) {
+            const index = state.userCollections.findIndex(c => c._id === updatedCollection._id);
+            if (index !== -1) {
+                state.userCollections.splice(index, 1, updatedCollection);
+            }
         }
     },
     actions: {
-        async loadUserCollections({ commit, rootState }) {
+        async addCollection({ commit }, collectionData) {
             try {
-                const response = await CollectionService.getUserCollections(rootState.auth.user._id);
-                commit("SET_USER_COLLECTIONS", response.data);
+                const response = await CollectionService.addCollection(collectionData);
+                commit('ADD_COLLECTION', response.data.collection);
+                return response;
             } catch (error) {
-                console.error('Error loading collections:', error.response?.data?.message || error.message);
+                handleApiError(error);
                 throw error;
             }
         },
-        async fetchCollectionDetails({ commit }, id) {
+        async updateCollection({ commit }, { id, data }) {
             try {
-                const response = await CollectionService.getCollectionDetails(id);
-                commit('SET_CURRENT_COLLECTION', response.data);
-
-                const stats = await CollectionService.getCollectionStats(id);
-                commit('SET_COLLECTION_STATS', stats.data);
+                const response = await CollectionService.updateCollection(id, data);
+                commit('UPDATE_COLLECTION', response.data.collection);
+                return response;
             } catch (error) {
                 handleApiError(error);
+                throw error;
             }
         }
     }

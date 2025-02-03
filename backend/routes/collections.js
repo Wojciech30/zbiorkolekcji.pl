@@ -85,6 +85,22 @@ router.get("/:id/attributes", async (req, res) => {
     }
 });
 
+router.get('/me', authenticateToken, async (req, res) => {
+    try {
+        const collections = await Collection.find({ owner: req.user._id })
+            .populate('owner', 'username')
+            .populate('category', 'name')
+            .sort('-createdAt');
+
+        res.json({
+            code: "USER_COLLECTIONS_FETCHED",
+            collections
+        });
+    } catch (error) {
+        handleError(res, error, "Błąd pobierania kolekcji użytkownika");
+    }
+});
+
 router.get("/:id", validateObjectId, async (req, res) => {
     try {
         const collection = await Collection.findById(req.params.id)
@@ -112,21 +128,24 @@ router.get("/:id", validateObjectId, async (req, res) => {
 
 router.post("/", authenticateToken, validateAllowedUsers, async (req, res) => {
     try {
-        const { name, category, privacy, allowedUsers } = req.body;
+        const { name, category, privacy, allowedUsers, description } = req.body;
 
-        const collectionData = {
+        const collection = await Collection.create({
             name,
+            description,
             category,
             owner: req.user._id,
             privacy: privacy || "public",
             allowedUsers
-        };
+        });
 
-        const collection = await Collection.create(collectionData);
+        const populatedCollection = await Collection.findById(collection._id)
+            .populate('owner', '_id username')
+            .populate('category', 'name');
 
         res.status(201).json({
             code: "COLLECTION_CREATED",
-            collection: collection.toJSON()
+            collection: populatedCollection.toJSON()
         });
     } catch (error) {
         handleError(res, error, "Błąd tworzenia kolekcji");

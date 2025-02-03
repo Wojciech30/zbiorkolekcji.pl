@@ -14,6 +14,9 @@
       <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div v-for="collection in collections" :key="collection._id" class="p-4 border rounded shadow hover:shadow-lg transition">
           <router-link :to="`/collection/${collection._id}`">
+            <p class="text-xs text-gray-500">
+              Właściciel: {{ collection.owner?.username || collection.owner }}
+            </p>
             <h3 class="text-lg font-bold">{{ collection.name }}</h3>
             <p class="text-sm text-gray-500">{{ collection.description }}</p>
           </router-link>
@@ -111,9 +114,15 @@ import CategoryService from "@/services/CategoryService";
 import {computed, ref} from "vue";
 import { useToast } from "vue-toastification";
 import store from "@/store";
+import collection from "../../../backend/models/Collection";
 
 export default {
   name: "CollectionsView",
+  computed: {
+    collection() {
+      return collection
+    }
+  },
   setup() {
     const collections = ref([]);
     const categories = ref([]);
@@ -126,27 +135,32 @@ export default {
     const isAdmin = computed(() => store.state.user?.role === "admin");
 
 
-    const isOwner = (collection) => collection.ownerId === userId.value;
+    const isOwner = (collection) => {const ownerId = collection.owner?._id || collection.owner;return ownerId === userId.value;};
 
     const loadCollections = async () => {
       try {
-        const response = this.$route.name === 'MyCollections'
-            ? await CollectionService.getUserCollections()
-            : await CollectionService.getPublicCollections();
+        const endpoint = this.$route.name === 'MyCollections'
+            ? CollectionService.getUserCollections
+            : CollectionService.getPublicCollections;
 
-        collections.value = response.data;
+        const response = await endpoint();
+        collections.value = response.data.collections.map(c => ({
+          ...c,
+          owner: c.owner?._id ? c.owner : { _id: c.owner }
+        }));
+
       } catch (error) {
-        console.error("Błąd pobierania kolekcji:", error);
-        toast.error("Nie udało się załadować kolekcji.");
+        toast.error("Błąd ładowania kolekcji");
       } finally {
         isLoading.value = false;
       }
     };
 
+
     const loadCategories = async () => {
       try {
         const response = await CategoryService.getCategories();
-        categories.value = response.data;
+        categories.value = response.data.categories;
       } catch (error) {
         console.error("Błąd pobierania kategorii:", error);
         toast.error("Nie udało się załadować kategorii.");
@@ -164,29 +178,71 @@ export default {
     };
 
     const handleCollectionForm = async () => {
+      if (!store.state.user?._id) {
+        toast.error("Nie jesteś zalogowany!");
+        return;
+      }
+
       try {
-        if (isEditingCollection.value) {
-          await CollectionService.updateCollection(currentCollection.value._id, {
-            name: currentCollection.value.name,
-            description: currentCollection.value.description,
-            categoryId: currentCollection.value.categoryId,
-            privacyStatus: currentCollection.value.isPrivate ? "private" : "public",
-          });
-          toast.success("Kolekcja została zaktualizowana!");
-        } else {
-          const response = await CollectionService.addCollection({
-            name: currentCollection.value.name,
-            description: currentCollection.value.description,
-            categoryId: currentCollection.value.categoryId,
-            privacyStatus: currentCollection.value.isPrivate ? "private" : "public",
-          });
-          collections.value.push(response.data);
-          toast.success("Kolekcja została dodana!");
+        const collectionPayload = {
+          name: currentCollection.value.name.trim(),
+          description: currentCollection.value.description?.trim() || "",
+          category: currentCollection.value.categoryId,
+          privacy: currentCollection.value.isPrivate ? 'private' : 'public'
+        };
+
+        if (!collectionPayload.name || !collectionPayload.category) {
+          toast.error("Wypełnij wymagane pola: nazwa i kategoria");
+          return;
         }
+
+        if (isEditingCollection.value) {
+          const response = await CollectionService.updateCollection(
+              currentCollection.value._id,
+              collectionPayload
+          );
+
+          const updatedIndex = collections.value.findIndex(
+              c => c._id === currentCollection.value._id
+          );
+          if (updatedIndex !== -1) {
+            collections.value[updatedIndex] = {
+              ...response.data.collection,
+              owner: collections.value[updatedIndex].owner
+            };
+          }
+
+          toast.success('Kolekcja zaktualizowana pomyślnie!');
+        } else {
+          const response = await CollectionService.addCollection(collectionPayload);
+
+          const newCollection = {
+            ...response.data.collection,
+            owner: {
+              _id: store.state.user._id,
+              username: store.state.user.username
+            },
+            category: categories.value.find(c => c._id === collectionPayload.category)
+          };
+
+          collections.value = [newCollection, ...collections.value];
+          toast.success('Kolekcja dodana pomyślnie!');
+        }
+
         closeCollectionForm();
+        await loadCollections(true);
+
       } catch (error) {
-        console.error("Błąd obsługi kolekcji:", error.response?.data || error.message);
-        toast.error("Nie udało się zapisać kolekcji.");
+        console.error('Błąd:', error);
+        const errorMessage = error.response?.data?.message
+            || error.response?.data?.details?.join(', ')
+            || 'Operacja nie powiodła się';
+
+        toast.error(`Błąd: ${errorMessage}`);
+
+        if (error.response?.status === 401) {
+          setTimeout(() => window.location.reload(), 2000);
+        }
       }
     };
 

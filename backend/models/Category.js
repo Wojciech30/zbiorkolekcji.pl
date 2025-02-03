@@ -5,7 +5,8 @@ const attributeSchema = new mongoose.Schema({
         type: String,
         required: [true, "Nazwa atrybutu jest wymagana"],
         minlength: [2, "Nazwa atrybutu musi mieć przynajmniej 2 znaki"],
-        maxlength: [50, "Nazwa atrybutu nie może być dłuższa niż 50 znaków"]
+        maxlength: [50, "Nazwa atrybutu nie może być dłuższa niż 50 znaków"],
+        collation: { locale: 'en', strength: 2 }
     },
     type: {
         type: String,
@@ -33,7 +34,8 @@ const categorySchema = new mongoose.Schema({
         required: [true, "Nazwa kategorii jest wymagana"],
         unique: true,
         minlength: [2, "Nazwa kategorii musi mieć przynajmniej 2 znaki"],
-        maxlength: [50, "Nazwa kategorii nie może być dłuższa niż 50 znaków"]
+        maxlength: [50, "Nazwa kategorii nie może być dłuższa niż 50 znaków"],
+        index: true
     },
     description: {
         type: String,
@@ -50,10 +52,5 @@ const categorySchema = new mongoose.Schema({
         }
     }
 });
-
-categorySchema.path("attributes").validate(function(attributes) {
-    const names = attributes.map(attr => attr.name.toLowerCase());
-    return new Set(names).size === names.length;
-}, "Atrybuty w kategorii muszą mieć unikalne nazwy");
 
 export default mongoose.model("Category", categorySchema);

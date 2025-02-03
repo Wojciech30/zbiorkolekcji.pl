@@ -11,12 +11,12 @@ export default {
         });
     },
 
-    getCollection(id) {
-        return apiClient.get(`/collections/${id}`);
+    addCollection(collectionData) {
+        return apiClient.post('/collections', collectionData);
     },
 
-    createCollection(collectionData) {
-        return apiClient.post('/collections', collectionData);
+    getCollection(id) {
+        return apiClient.get(`/collections/${id}`);
     },
 
     updateCollection(id, updates) {
@@ -27,12 +27,16 @@ export default {
         return apiClient.delete(`/collections/${id}`);
     },
 
+    getUserCollections(userId) {
+        return apiClient.get(`/users/${userId}/collections`);
+    },
+
     getPopularCollections() {
         return apiClient.get('/collections/special/popular');
     },
 
-    getUserCollections(userId) {
-        return apiClient.get(`/users/${userId}/collections`);
+    getPublicCollections() {
+        return apiClient.get('/collections');
     },
 
     searchCollections(query) {

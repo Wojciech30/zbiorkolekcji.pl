@@ -18,20 +18,110 @@
         <h2 class="text-2xl font-semibold mb-4 text-gray-700">Zarządzanie kategoriami</h2>
 
         <form @submit.prevent="addCategory" class="mb-6">
-          <div class="flex gap-4">
-            <input
-                v-model="newCategory"
-                type="text"
-                placeholder="Wprowadź nazwę kategorii"
-                class="input-field"
-                :disabled="isProcessing"
-            />
+          <div class="space-y-4">
+            <!-- Pole nazwy -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
+              <input
+                  v-model="newCategory"
+                  type="text"
+                  placeholder="Np. Książki"
+                  class="input-field"
+                  :disabled="isProcessing"
+              />
+            </div>
+
+            <!-- Pole opisu -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+              <textarea
+                  v-model="categoryDescription"
+                  placeholder="Krótki opis kategorii"
+                  class="input-field h-24"
+                  :disabled="isProcessing"
+              ></textarea>
+            </div>
+
+            <!-- Sekcja atrybutów -->
+            <div>
+              <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
+
+              <div v-for="(attr, index) in selectedAttributes" :key="index"
+                   class="bg-gray-50 p-4 rounded-lg mb-3 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <!-- Nazwa atrybutu -->
+                  <div>
+                    <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
+                    <input
+                        v-model="attr.name"
+                        type="text"
+                        placeholder="Np. Autor"
+                        class="input-field"
+                    />
+                  </div>
+
+                  <!-- Typ atrybutu -->
+                  <div>
+                    <label class="block text-sm text-gray-600 mb-1">Typ *</label>
+                    <select
+                        v-model="attr.type"
+                        class="input-field"
+                    >
+                      <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
+                        {{ type.label }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Wymagany -->
+                <div class="flex items-center space-x-2">
+                  <input
+                      type="checkbox"
+                      v-model="attr.required"
+                      id="required"
+                      class="checkbox"
+                  />
+                  <label for="required" class="text-sm text-gray-600">Wymagane pole</label>
+                </div>
+
+                <!-- Opcje dla typu 'select' -->
+                <div v-if="attr.type === 'select'" class="space-y-2">
+                  <label class="block text-sm text-gray-600">Opcje (oddziel przecinkami) *</label>
+                  <input
+                      v-model="attr.optionsInput"
+                      type="text"
+                      placeholder="Np. Horror,Komedia,Dramat"
+                      class="input-field"
+                      @change="updateOptions(index, $event.target.value)"
+                  />
+                </div>
+
+                <button
+                    type="button"
+                    @click="removeAttribute(index)"
+                    class="text-red-500 text-sm hover:text-red-700"
+                >
+                  Usuń atrybut
+                </button>
+              </div>
+
+              <button
+                  type="button"
+                  @click="addAttribute"
+                  class="btn-secondary mt-2"
+              >
+                + Dodaj atrybut
+              </button>
+            </div>
+
+            <!-- Przycisk submit -->
             <button
                 type="submit"
-                class="btn-primary"
+                class="btn-primary w-full"
                 :disabled="isProcessing"
             >
-              <span v-if="!isProcessing">Dodaj kategorię</span>
+              <span v-if="!isProcessing">Utwórz kategorię</span>
               <Spinner v-else class="w-5 h-5 mx-auto" />
             </button>
           </div>
@@ -107,8 +197,42 @@ export default {
     const categories = ref([])
     const collections = ref([])
     const newCategory = ref('')
+    const categoryDescription = ref('')
+    const selectedAttributes = ref([])
+    const attributeTypes = [
+      { value: 'text', label: 'Tekst' },
+      { value: 'number', label: 'Liczba' },
+      { value: 'date', label: 'Data' },
+      { value: 'boolean', label: 'Tak/Nie' },
+      { value: 'select', label: 'Lista wyboru' }
+    ]
     const loading = ref(true)
     const isProcessing = ref(false)
+
+    const addAttribute = () => {
+      selectedAttributes.value = [
+        ...selectedAttributes.value,
+        {
+          name: '',
+          type: 'text',
+          required: false,
+          options: [],
+          optionsInput: ''
+        }
+      ]
+    }
+
+    const updateOptions = (index) => {
+      selectedAttributes.value[index].options =
+          selectedAttributes.value[index].optionsInput
+              .split(',')
+              .map(opt => opt.trim())
+              .filter(opt => opt)
+    }
+
+    const removeAttribute = (index) => {
+      selectedAttributes.value.splice(index, 1)
+    }
 
     const checkAdminAccess = () => {
       if (!store.getters['auth/isAdmin']) {
@@ -141,36 +265,44 @@ export default {
     }
 
     const addCategory = async () => {
-      isProcessing.value = true
+      isProcessing.value = true;
       try {
-        const categoryName = newCategory.value.trim()
+        const categoryData = {
+          name: newCategory.value.trim(),
+          description: categoryDescription.value?.trim() || "",
+          attributes: selectedAttributes.value || []
+        };
 
-        if (!categoryName) {
-          toast.error('Nazwa kategorii nie może być pusta')
-          return
+        if (!categoryData.name) {
+          toast.error('Nazwa kategorii nie może być pusta');
+          return;
         }
 
-        const exists = categories.value.some(
-            c => c.name.toLowerCase() === categoryName.toLowerCase()
-        )
+        const response = await CategoryService.createCategory(categoryData);
 
-        if (exists) {
-          toast.error('Kategoria o tej nazwie już istnieje')
-          return
-        }
+        categories.value = [...categories.value, response.data.category];
 
-        const response = await CategoryService.createCategory({ name: categoryName })
-        categories.value = [...categories.value, response.data]
-        newCategory.value = ''
-        toast.success('Kategoria dodana pomyślnie!')
+        newCategory.value = '';
+        categoryDescription.value = '';
+        selectedAttributes.value = [];
+
+        toast.success('Kategoria dodana pomyślnie!');
 
       } catch (error) {
-        const message = error.response?.data?.message || 'Błąd podczas dodawania kategorii'
-        toast.error(message)
+        if (error.response?.data?.code === "DUPLICATE_CATEGORY") {
+          toast.error('Kategoria o tej nazwie już istnieje');
+          return;
+        }
+
+        const message = error.response?.data?.message
+            || error.message
+            || 'Błąd podczas dodawania kategorii';
+        toast.error(message);
+
       } finally {
-        isProcessing.value = false
+        isProcessing.value = false;
       }
-    }
+    };
 
     const editCategory = async (category) => {
       const newName = prompt('Nowa nazwa kategorii:', category.name)
@@ -178,15 +310,11 @@ export default {
 
       isProcessing.value = true
       try {
-        const response = await CategoryService.updateCategory(category._id, {
-          name: newName.trim()
-        })
-
+        const response = await CategoryService.updateCategory(category._id, { name: newName.trim() });
         categories.value = categories.value.map(c =>
-            c._id === category._id ? { ...c, name: response.data.name } : c
-        )
-
-        toast.success('Kategoria zaktualizowana!')
+            c._id === category._id ? response.data.category : c
+        );
+        toast.success('Kategoria zaktualizowana!');
       } catch (error) {
         const message = error.response?.data?.message || 'Błąd podczas edycji kategorii'
         toast.error(message)
@@ -222,10 +350,15 @@ export default {
       collections,
       newCategory,
       loading,
+      selectedAttributes,
+      attributeTypes,
       isProcessing,
       addCategory,
       editCategory,
-      deleteCategory
+      deleteCategory,
+      addAttribute,
+      removeAttribute,
+      updateOptions
     }
   }
 }
