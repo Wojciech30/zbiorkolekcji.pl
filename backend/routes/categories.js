@@ -22,7 +22,6 @@ const handleError = (res, error, defaultMessage) => {
     res.status(500).json(response);
 };
 
-// Tworzenie nowej kategorii
 router.post("/", authenticateToken, checkAdmin, async (req, res) => {
     try {
         const category = new Category({
@@ -41,7 +40,6 @@ router.post("/", authenticateToken, checkAdmin, async (req, res) => {
     }
 });
 
-// Pobieranie wszystkich kategorii
 router.get("/", async (req, res) => {
     try {
         const categories = await Category.find()
@@ -89,7 +87,6 @@ router.patch("/:id", authenticateToken, checkAdmin, async (req, res) => {
     }
 });
 
-// Usuwanie kategorii
 router.delete("/:id", authenticateToken, checkAdmin, async (req, res) => {
     try {
         const categoryInUse = await Collection.exists({ category: req.params.id });

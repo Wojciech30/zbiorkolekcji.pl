@@ -1,9 +1,6 @@
 import apiClient from './apiClient';
 
 export default {
-    getItems(params = {}) {
-        return apiClient.get('/items', { params });
-    },
 
     getItem(id) {
         return apiClient.get(`/items/${id}`);
@@ -21,7 +18,7 @@ export default {
         return apiClient.delete(`/items/${id}`);
     },
 
-    getCollectionItems(collectionId) {
+    getItemsByCollection(collectionId) {
         return apiClient.get(`/collections/${collectionId}/items`);
     },
 

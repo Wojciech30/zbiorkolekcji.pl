@@ -128,13 +128,13 @@ export default {
     const isLoading = ref(true);
     const showAddItemForm = ref(false);
     const newItem = ref({ name: "", description: "", imageUrl: "" });
-    const userId = computed(() => store.state.user?.id);
+    const userId = computed(() => store.state.auth.user?._id);
     const isEditingItem = ref(false);
     ref(true);
     const canEdit = computed(() => {
       return (
           collection.value?.owner?._id === userId.value ||
-          store.state.user?.role === "admin"
+          store.state.auth.user?.role === "admin"
       );
     });
 
@@ -152,8 +152,8 @@ export default {
 
     const updateItem = (item) => {
       isEditingItem.value = true;
-      newItem.value = { ...item }; // Wypełnij formularz danymi przedmiotu
-      showAddItemForm.value = true; // Pokaż formularz
+      newItem.value = { ...item };
+      showAddItemForm.value = true;
     };
 
     const loadItems = async () => {
@@ -174,7 +174,6 @@ export default {
     const handleAddItem = async () => {
       try {
         if (isEditingItem.value) {
-          // Tryb edycji
           await ItemService.updateItem(newItem.value._id, newItem.value);
           const index = items.value.findIndex((item) => item._id === newItem.value._id);
           if (index !== -1) {
@@ -182,7 +181,6 @@ export default {
           }
           toast.success("Przedmiot został zaktualizowany!");
         } else {
-          // Tryb dodawania
           const response = await ItemService.addItem({
             ...newItem.value,
             collectionId: collection.value._id,
@@ -215,7 +213,7 @@ export default {
     };
 
     onMounted(async () => {
-      console.log("Stan użytkownika po załadowaniu strony:", store.state.user);
+      console.log("Stan użytkownika po załadowaniu strony:", store.state.auth.user);
       isLoading.value = true;
       try {
         await Promise.all([store.dispatch("fetchProfile"), loadCollection()]);

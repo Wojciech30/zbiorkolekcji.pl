@@ -128,11 +128,12 @@ export default {
     const categories = ref([]);
     const isLoading = ref(true);
     const showAddCollectionForm = ref(false);
+    const isViewingSingleCollection = ref(false);
     const isEditingCollection = ref(false);
     const currentCollection = ref({ name: "", description: "", categoryId: "", isPrivate: false });
     const toast = useToast();
-    const userId = computed(() => store.state.user?.id);
-    const isAdmin = computed(() => store.state.user?.role === "admin");
+    const userId = computed(() => store.state.auth.user?._id);
+    const isAdmin = computed(() => store.state.auth.user?.role === "admin");
 
 
     const isOwner = (collection) => {const ownerId = collection.owner?._id || collection.owner;return ownerId === userId.value;};
@@ -178,7 +179,7 @@ export default {
     };
 
     const handleCollectionForm = async () => {
-      if (!store.state.user?._id) {
+      if (!store.state.auth.user?._id) {
         toast.error("Nie jesteś zalogowany!");
         return;
       }
@@ -219,8 +220,8 @@ export default {
           const newCollection = {
             ...response.data.collection,
             owner: {
-              _id: store.state.user._id,
-              username: store.state.user.username
+              _id: store.state.auth.user._id,
+              username: store.state.auth.user.username
             },
             category: categories.value.find(c => c._id === collectionPayload.category)
           };
@@ -258,7 +259,7 @@ export default {
     };
 
     const editCollection = (collection) => {
-      currentCollection.value = { ...collection, isPrivate: collection.privacyStatus === "private" };
+      currentCollection.value = { ...collection, isPrivate: collection.privacy === "private" };
       isEditingCollection.value = true;
       showAddCollectionForm.value = true;
     };
@@ -272,6 +273,7 @@ export default {
       isLoading,
       showAddCollectionForm,
       isEditingCollection,
+      isViewingSingleCollection,
       currentCollection,
       openAddCollectionForm,
       closeCollectionForm,

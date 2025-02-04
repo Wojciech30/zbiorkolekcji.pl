@@ -14,7 +14,7 @@ export default {
     },
 
     updateCategory(id, updates) {
-        return apiClient.patch(`/categories/${id}`, updates);
+        return apiClient.patch(`/categories/${id}`, {name: updates.name, description: updates.description, attributes: updates.attributes})
     },
 
     deleteCategory(id) {
