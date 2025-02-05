@@ -188,11 +188,11 @@
           </div>
 
           <!-- Główna zawartość modalu -->
-          <form @submit.prevent="saveEditedCategory" class="flex-1 flex flex-col min-h-0">
+          <form @submit.prevent="saveEditedCategory" class="flex-1 flex flex-col overflow-hidden">
             <!-- Przewijana sekcja -->
-            <div class="flex-1 min-h-0 relative">
+            <div class="flex-1 min-h-0 overflow-y-auto p-6">
               <div class="scrollable-area h-full p-6">
-              <div class="space-y-4">
+                <div class="space-y-4">
                 <!-- Nazwa kategorii -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
@@ -610,7 +610,6 @@ export default {
 }
 
 .scrollable-area {
-  overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #3b82f6 #f1f1f1;
   -webkit-overflow-scrolling: touch;
@@ -622,6 +621,7 @@ export default {
 
 .scrollable-area::-webkit-scrollbar-track {
   background: #f1f1f1;
+  border-radius: 4px;
 }
 
 .scrollable-area::-webkit-scrollbar-thumb {
@@ -633,3 +633,4 @@ export default {
   background: #2563eb;
 }
 </style>
+

@@ -7,7 +7,7 @@
 
     <!-- Wyszukiwarka -->
     <section class="mt-8">
-      <h2 class="text-2xl font-semibold">Wyszukiwarka</h2>
+      <h2 class="text-2xl font-semibold">Wyszukiwarka kategorii</h2>
       <div class="mt-4 flex gap-4">
         <input
             type="text"
@@ -30,7 +30,7 @@
             :key="category._id"
             class="p-4 border rounded shadow hover:shadow-lg transition"
         >
-          <router-link :to="`/category/${category._id}`">
+          <router-link :to="`/categories/${category._id}/collections`">
             <h3 class="text-lg font-bold">{{ category.name }}</h3>
             <p class="text-sm text-gray-500">{{ category.description }}</p>
           </router-link>
@@ -73,6 +73,7 @@ export default {
       isLoading: true,
     };
   },
+
   computed: {
     filteredCategories() {
       if (!this.searchQuery.trim()) {
@@ -83,9 +84,9 @@ export default {
       );
     },
   },
+
   async mounted() {
     try {
-      // Pobieranie kategorii
       try {
         const categoryResponse = await CategoryService.getCategories();
         this.categories = categoryResponse.data.categories;
@@ -94,7 +95,6 @@ export default {
         this.$toast.error("Nie udało się załadować kategorii.");
       }
 
-      // Pobieranie najpopularniejszych kolekcji
       try {
         const collectionResponse = await CollectionService.getCollections();
         this.popularCollections = collectionResponse.data.collections;
@@ -107,6 +107,7 @@ export default {
     }
   },
 };
+
 </script>
 
 <style>

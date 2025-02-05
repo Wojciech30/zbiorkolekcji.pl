@@ -46,8 +46,8 @@ const routes = [
         props: true
     },
     {
-        path: "/categories/:id",
-        name: "Category",
+        path: "/categories/:id/collections",
+        name: "CategoryCollections",
         component: () => import("@/views/CategoryView.vue"),
         meta: { access: "public" },
         props: true
