@@ -1,293 +1,275 @@
 <template>
   <div class="container mx-auto p-4">
-    <!-- Header -->
-    <header>
-      <h1 class="text-4xl font-bold">{{ isViewingSingleCollection ? collection?.name : "Moje Kolekcje" }}</h1>
-      <p v-if="isViewingSingleCollection" class="text-gray-600">{{ collection?.description }}</p>
+    <!-- Nagłówek -->
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-800">
+        {{ isUserCollections ? 'Moje Kolekcje' : 'Publiczne Kolekcje' }}
+      </h1>
+      <p class="text-gray-600 mt-2">
+        {{ isUserCollections ? 'Zarządzaj swoimi kolekcjami' : 'Przeglądaj wszystkie publiczne kolekcje' }}
+      </p>
     </header>
 
-    <!-- Widok listy kolekcji -->
-    <section v-if="!isViewingSingleCollection" class="mt-8">
-      <h2 class="text-2xl font-semibold">Twoje Kolekcje</h2>
-      <div v-if="isLoading" class="text-center">Ładowanie danych...</div>
-      <div v-else-if="collections.length === 0" class="text-center">Brak kolekcji.</div>
-      <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div v-for="collection in collections" :key="collection._id" class="p-4 border rounded shadow hover:shadow-lg transition">
-          <router-link :to="`/collection/${collection._id}`">
-            <p class="text-xs text-gray-500">
-              Właściciel: {{ collection.owner?.username || collection.owner }}
-            </p>
-            <h3 class="text-lg font-bold">{{ collection.name }}</h3>
-            <p class="text-sm text-gray-500">{{ collection.description }}</p>
+    <!-- Ładowanie -->
+    <div v-if="loading" class="text-center py-8">
+      <Spinner class="w-12 h-12 mx-auto text-blue-500" />
+    </div>
+
+    <!-- Główna zawartość -->
+    <div v-else>
+      <!-- Statystyki i przyciski akcji -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div class="stats-container">
+          <span class="stat-item">
+            Łącznie kolekcji: <strong>{{ pagination.total }}</strong>
+          </span>
+          <span class="stat-item">
+            Strona: <strong>{{ pagination.page }}/{{ pagination.pages }}</strong>
+          </span>
+        </div>
+
+        <router-link
+            v-if="isUserCollections"
+            to="/collections/new"
+            class="btn-primary flex items-center gap-2"
+        >
+          <PlusIcon class="w-5 h-5" />
+          Nowa Kolekcja
+        </router-link>
+      </div>
+
+      <!-- Brak kolekcji -->
+      <div v-if="collections.length === 0" class="text-center py-8 bg-gray-50 rounded-lg">
+        <p class="text-gray-500">
+          {{ isUserCollections ? 'Nie masz jeszcze żadnych kolekcji' : 'Brak dostępnych kolekcji' }}
+        </p>
+      </div>
+
+      <!-- Lista kolekcji -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+            v-for="collection in collections"
+            :key="collection._id"
+            class="group relative p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
+        >
+          <!-- Akcje dla właściciela -->
+          <div v-if="isUserCollections" class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+            <router-link
+                :to="`/collections/${collection._id}/edit`"
+                class="p-1.5 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
+                title="Edytuj"
+            >
+              <PencilIcon class="w-5 h-5" />
+            </router-link>
+            <button
+                @click="deleteCollection(collection._id)"
+                class="p-1.5 bg-red-100 text-red-600 rounded-md hover:bg-red-200"
+                title="Usuń"
+            >
+              <TrashIcon class="w-5 h-5" />
+            </button>
+          </div>
+
+          <router-link :to="`/collection/${collection._id}`" class="block">
+            <!-- Okładka -->
+            <div class="mb-4 relative h-48 overflow-hidden rounded-lg">
+              <img
+                  :src="collection.coverImage || '/placeholder-collection.jpg'"
+                  alt="Okładka kolekcji"
+                  class="w-full h-full object-cover"
+              />
+            </div>
+
+            <!-- Treść -->
+            <h3 class="text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition">
+              {{ collection.name }}
+            </h3>
+            <p class="text-gray-600 mt-2 line-clamp-2">{{ collection.description }}</p>
+
+            <!-- Statystyki -->
+            <div class="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
+              <div class="flex items-center gap-1">
+                <UserIcon class="w-4 h-4" />
+                <span>{{ collection.owner?.username }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <DocumentTextIcon class="w-4 h-4" />
+                <span>{{ collection.itemsCount }} elementów</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <EyeIcon class="w-4 h-4" />
+                <span>{{ collection.views }} wyświetleń</span>
+              </div>
+            </div>
           </router-link>
-          <button v-if="isOwner(collection) || isAdmin" @click="editCollection(collection)" class="text-blue-500 hover:underline">
-            Edytuj
-          </button>
-          <button v-if="isOwner(collection) || isAdmin" @click="deleteCollection(collection._id)" class="text-red-500 hover:underline">
-            Usuń
-          </button>
         </div>
       </div>
-      <button
-          v-if="!showAddCollectionForm"
-          @click="openAddCollectionForm"
-          class="fixed bottom-12 right-4 bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-600"
-      >
-        Dodaj kolekcję
-      </button>
-    </section>
 
-    <!-- Formularz dodawania kolekcji -->
-    <section v-if="showAddCollectionForm" class="mt-8">
-      <h2 class="text-2xl font-semibold">{{ isEditingCollection ? "Edytuj kolekcję" : "Dodaj kolekcję" }}</h2>
-      <form @submit.prevent="handleCollectionForm" class="mt-4">
-        <div class="mb-4">
-          <label for="collectionName" class="block text-sm font-medium text-gray-700">Nazwa kolekcji</label>
-          <input
-              v-model="currentCollection.name"
-              type="text"
-              id="collectionName"
-              class="w-full p-2 border rounded"
-              required
-          />
-        </div>
-        <div class="mb-4">
-          <label for="collectionDescription" class="block text-sm font-medium text-gray-700">Opis kolekcji</label>
-          <textarea
-              v-model="currentCollection.description"
-              id="collectionDescription"
-              class="w-full p-2 border rounded"
-          ></textarea>
-        </div>
-        <div class="mb-4">
-          <label for="collectionCategory" class="block text-sm font-medium text-gray-700">Kategoria</label>
-          <select
-              v-model="currentCollection.categoryId"
-              id="collectionCategory"
-              class="w-full p-2 border rounded"
-              required
-          >
-            <option value="" disabled>Wybierz kategorię</option>
-            <option v-for="category in categories" :key="category._id" :value="category._id">
-              {{ category.name }}
-            </option>
-          </select>
-        </div>
-        <div class="mb-4 flex items-center">
-          <input
-              type="checkbox"
-              v-model="currentCollection.isPrivate"
-              id="collectionPrivate"
-              class="mr-2"
-          />
-          <label for="collectionPrivate" class="text-gray-700">Prywatna kolekcja</label>
-        </div>
-        <div class="flex justify-end space-x-2">
-          <button
-              type="button"
-              class="p-2 bg-gray-300 rounded hover:bg-gray-400"
-              @click="closeCollectionForm"
-          >
-            Anuluj
-          </button>
-          <button type="submit" class="p-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-            Zapisz
-          </button>
-        </div>
-      </form>
-    </section>
+      <!-- Paginacja -->
+      <div v-if="pagination.pages > 1" class="mt-8 flex justify-center gap-2">
+        <button
+            @click="changePage(-1)"
+            :disabled="pagination.page === 1"
+            class="btn-pagination"
+        >
+          &lt;
+        </button>
 
-    <!-- Przycisk dodawania kolekcji -->
-    <button
-        v-if="!showAddCollectionForm"
-        @click="openAddCollectionForm"
-        class="fixed bottom-12 right-4 bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-600"
-    >
-      Dodaj kolekcję
-    </button>
+        <span class="px-4 py-2 text-gray-700">
+          Strona {{ pagination.page }} z {{ pagination.pages }}
+        </span>
+
+        <button
+            @click="changePage(1)"
+            :disabled="pagination.page >= pagination.pages"
+            class="btn-pagination"
+        >
+          &gt;
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import CollectionService from "@/services/CollectionService";
-import CategoryService from "@/services/CategoryService";
-import {computed, ref} from "vue";
-import { useToast } from "vue-toastification";
-import store from "@/store";
-import collection from "../../../backend/models/Collection";
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+import { useToast } from 'vue-toastification'
+import CollectionService from '@/services/CollectionService'
+import Spinner from '@/components/AppSpinner.vue'
+import {PlusIcon, PencilIcon, TrashIcon, UserIcon, DocumentTextIcon, EyeIcon} from '@heroicons/vue/24/outline'
 
 export default {
-  name: "CollectionsView",
-  computed: {
-    collection() {
-      return collection
+  name: 'CollectionsView',
+  components: {
+    Spinner,
+    PlusIcon,
+    PencilIcon,
+    TrashIcon,
+    UserIcon,
+    DocumentTextIcon,
+    EyeIcon
+  },
+  props: {
+    access: {
+      type: String,
+      default: 'public'
     }
   },
   setup() {
-    const collections = ref([]);
-    const categories = ref([]);
-    const isLoading = ref(true);
-    const showAddCollectionForm = ref(false);
-    const isViewingSingleCollection = ref(false);
-    const isEditingCollection = ref(false);
-    const currentCollection = ref({ name: "", description: "", categoryId: "", isPrivate: false });
-    const toast = useToast();
-    const userId = computed(() => store.state.auth.user?._id);
-    const isAdmin = computed(() => store.state.auth.user?.role === "admin");
+    const router = useRouter()
+    const store = useStore()
+    const toast = useToast()
 
+    const collection = ref()
+    const isOwner = computed(() => collection.value?.owner?._id === store.state.auth.user?._id)
+    const loading = ref(true)
+    const collections = ref([])
+    const pagination = ref({
+      page: 1,
+      limit: 9,
+      total: 0,
+      pages: 1
+    })
 
-    const isOwner = (collection) => {const ownerId = collection.owner?._id || collection.owner;return ownerId === userId.value;};
+    const isUserCollections = !isOwner.value
 
     const loadCollections = async () => {
       try {
-        const endpoint = this.$route.name === 'MyCollections'
+        loading.value = true
+        const serviceMethod = isUserCollections.value
             ? CollectionService.getUserCollections
-            : CollectionService.getPublicCollections;
+            : CollectionService.getCollections
 
-        const response = await endpoint();
-        collections.value = response.data.collections.map(c => ({
-          ...c,
-          owner: c.owner?._id ? c.owner : { _id: c.owner }
-        }));
+        const params = {
+          page: pagination.value.page,
+          limit: pagination.value.limit
+        }
+
+        const response = await serviceMethod(params)
+
+        collections.value = response.data.collections
+        pagination.value = {
+          page: response.data.page,
+          limit: response.data.limit,
+          total: response.data.total,
+          pages: response.data.pages
+        }
 
       } catch (error) {
-        toast.error("Błąd ładowania kolekcji");
+        handleError(error, 'Błąd pobierania kolekcji')
       } finally {
-        isLoading.value = false;
+        loading.value = false
       }
-    };
+    }
 
-
-    const loadCategories = async () => {
-      try {
-        const response = await CategoryService.getCategories();
-        categories.value = response.data.categories;
-      } catch (error) {
-        console.error("Błąd pobierania kategorii:", error);
-        toast.error("Nie udało się załadować kategorii.");
+    const changePage = (delta) => {
+      const newPage = pagination.value.page + delta
+      if (newPage > 0 && newPage <= pagination.value.pages) {
+        pagination.value.page = newPage
+        loadCollections()
       }
-    };
-
-    const openAddCollectionForm = () => {
-      currentCollection.value = { name: "", description: "", categoryId: "", isPrivate: false };
-      isEditingCollection.value = false;
-      showAddCollectionForm.value = true;
-    };
-
-    const closeCollectionForm = () => {
-      showAddCollectionForm.value = false;
-    };
-
-    const handleCollectionForm = async () => {
-      if (!store.state.auth.user?._id) {
-        toast.error("Nie jesteś zalogowany!");
-        return;
-      }
-
-      try {
-        const collectionPayload = {
-          name: currentCollection.value.name.trim(),
-          description: currentCollection.value.description?.trim() || "",
-          category: currentCollection.value.categoryId,
-          privacy: currentCollection.value.isPrivate ? 'private' : 'public'
-        };
-
-        if (!collectionPayload.name || !collectionPayload.category) {
-          toast.error("Wypełnij wymagane pola: nazwa i kategoria");
-          return;
-        }
-
-        if (isEditingCollection.value) {
-          const response = await CollectionService.updateCollection(
-              currentCollection.value._id,
-              collectionPayload
-          );
-
-          const updatedIndex = collections.value.findIndex(
-              c => c._id === currentCollection.value._id
-          );
-          if (updatedIndex !== -1) {
-            collections.value[updatedIndex] = {
-              ...response.data.collection,
-              owner: collections.value[updatedIndex].owner
-            };
-          }
-
-          toast.success('Kolekcja zaktualizowana pomyślnie!');
-        } else {
-          const response = await CollectionService.addCollection(collectionPayload);
-
-          const newCollection = {
-            ...response.data.collection,
-            owner: {
-              _id: store.state.auth.user._id,
-              username: store.state.auth.user.username
-            },
-            category: categories.value.find(c => c._id === collectionPayload.category)
-          };
-
-          collections.value = [newCollection, ...collections.value];
-          toast.success('Kolekcja dodana pomyślnie!');
-        }
-
-        closeCollectionForm();
-        await loadCollections(true);
-
-      } catch (error) {
-        console.error('Błąd:', error);
-        const errorMessage = error.response?.data?.message
-            || error.response?.data?.details?.join(', ')
-            || 'Operacja nie powiodła się';
-
-        toast.error(`Błąd: ${errorMessage}`);
-
-        if (error.response?.status === 401) {
-          setTimeout(() => window.location.reload(), 2000);
-        }
-      }
-    };
+    }
 
     const deleteCollection = async (id) => {
+      if (!confirm('Czy na pewno chcesz usunąć tę kolekcję? Ta operacja jest nieodwracalna.')) return
+
       try {
-        await CollectionService.deleteCollection(id);
-        collections.value = collections.value.filter((c) => c._id !== id);
-        toast.success("Kolekcja została usunięta.");
+        await CollectionService.deleteCollection(id)
+        collections.value = collections.value.filter(c => c._id !== id)
+        toast.success('Kolekcja została usunięta')
       } catch (error) {
-        console.error("Błąd usuwania kolekcji:", error);
-        toast.error("Nie udało się usunąć kolekcji.");
+        handleError(error, 'Błąd usuwania kolekcji')
       }
-    };
+    }
 
-    const editCollection = (collection) => {
-      currentCollection.value = { ...collection, isPrivate: collection.privacy === "private" };
-      isEditingCollection.value = true;
-      showAddCollectionForm.value = true;
-    };
+    const handleError = (error, defaultMessage) => {
+      const message = error.response?.data?.message || defaultMessage
+      toast.error(message)
+    }
 
-    loadCollections();
-    loadCategories();
+    onMounted(async () => {
+      if (isUserCollections.value && !store.getters['auth/isLoggedIn']) {
+        await router.push({name: 'Login'})
+        return
+      }
+      await loadCollections()
+    })
 
     return {
+      loading,
       collections,
-      categories,
-      isLoading,
-      showAddCollectionForm,
-      isEditingCollection,
-      isViewingSingleCollection,
-      currentCollection,
-      openAddCollectionForm,
-      closeCollectionForm,
-      handleCollectionForm,
-      deleteCollection,
-      editCollection,
-      isOwner,
-      isAdmin,
-    };
-  },
-};
+      pagination,
+      isUserCollections,
+      changePage,
+      deleteCollection
+    }
+  }
+}
 </script>
 
+<style scoped>
+.stats-container {
+  @apply flex gap-4 text-sm text-gray-600;
+}
 
-<style>
-/* Stylizacje */
+.stat-item {
+  @apply bg-gray-100 px-3 py-1 rounded-md;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center;
+}
+
+.btn-pagination {
+  @apply px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 </style>
