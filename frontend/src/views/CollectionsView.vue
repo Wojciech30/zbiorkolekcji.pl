@@ -2,12 +2,8 @@
   <div class="container mx-auto p-4">
     <!-- Nagłówek -->
     <header class="mb-8">
-      <h1 class="text-4xl font-bold text-gray-800">
-        {{ isUserCollections ? 'Moje Kolekcje' : 'Publiczne Kolekcje' }}
-      </h1>
-      <p class="text-gray-600 mt-2">
-        {{ isUserCollections ? 'Zarządzaj swoimi kolekcjami' : 'Przeglądaj wszystkie publiczne kolekcje' }}
-      </p>
+      <h1 class="text-4xl font-bold text-gray-800">Moje Kolekcje</h1>
+      <p class="text-gray-600 mt-2">Zarządzaj swoimi kolekcjami</p>
     </header>
 
     <!-- Ładowanie -->
@@ -28,21 +24,18 @@
           </span>
         </div>
 
-        <router-link
-            v-if="isUserCollections"
-            to="/collections/new"
+        <button
+            @click="openAddModal"
             class="btn-primary flex items-center gap-2"
         >
           <PlusIcon class="w-5 h-5" />
           Nowa Kolekcja
-        </router-link>
+        </button>
       </div>
 
       <!-- Brak kolekcji -->
       <div v-if="collections.length === 0" class="text-center py-8 bg-gray-50 rounded-lg">
-        <p class="text-gray-500">
-          {{ isUserCollections ? 'Nie masz jeszcze żadnych kolekcji' : 'Brak dostępnych kolekcji' }}
-        </p>
+        <p class="text-gray-500">Nie masz jeszcze żadnych kolekcji</p>
       </div>
 
       <!-- Lista kolekcji -->
@@ -53,7 +46,7 @@
             class="group relative p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
         >
           <!-- Akcje dla właściciela -->
-          <div v-if="isUserCollections" class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+          <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
             <router-link
                 :to="`/collections/${collection._id}/edit`"
                 class="p-1.5 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
@@ -128,17 +121,123 @@
         </button>
       </div>
     </div>
+
+    <!-- Modal dodawania kolekcji -->
+    <div v-if="isAddModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+        <div class="p-6 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-2xl font-semibold">Nowa kolekcja</h3>
+        </div>
+
+        <form @submit.prevent="submitCollection" class="flex-1 flex flex-col overflow-hidden">
+          <div class="flex-1 min-h-0 overflow-y-auto p-6">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa *</label>
+                <input
+                    v-model="newCollection.name"
+                    type="text"
+                    required
+                    class="input-field"
+                    :disabled="isProcessing"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                <textarea
+                    v-model="newCollection.description"
+                    class="input-field h-24"
+                    :disabled="isProcessing"
+                ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kategoria *</label>
+                <select
+                    v-model="newCollection.category"
+                    class="input-field"
+                    required
+                    :disabled="isProcessing"
+                >
+                  <option v-for="category in categories" :value="category._id" :key="category._id">
+                    {{ category.name }}
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prywatność *</label>
+                <div class="space-y-2">
+                  <label class="flex items-center space-x-2">
+                    <input
+                        type="radio"
+                        v-model="newCollection.privacy"
+                        value="public"
+                        class="radio"
+                    />
+                    <span>Publiczna</span>
+                  </label>
+                  <label class="flex items-center space-x-2">
+                    <input
+                        type="radio"
+                        v-model="newCollection.privacy"
+                        value="private"
+                        class="radio"
+                    />
+                    <span>Prywatna</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Zdjęcie okładki</label>
+                <input
+                    type="file"
+                    @change="handleFileUpload"
+                    class="input-field"
+                    accept="image/*"
+                    :disabled="isProcessing"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="p-6 border-t border-gray-200 flex-shrink-0">
+            <div class="flex justify-end gap-3">
+              <button
+                  type="button"
+                  @click="closeAddModal"
+                  class="btn-gray"
+                  :disabled="isProcessing"
+              >
+                Anuluj
+              </button>
+              <button
+                  type="submit"
+                  class="btn-primary"
+                  :disabled="isProcessing"
+              >
+                <span v-if="!isProcessing">Utwórz kolekcję</span>
+                <Spinner v-else class="w-5 h-5 mx-auto" />
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { useToast } from 'vue-toastification'
 import CollectionService from '@/services/CollectionService'
+import CategoryService from '@/services/CategoryService'
 import Spinner from '@/components/AppSpinner.vue'
-import {PlusIcon, PencilIcon, TrashIcon, UserIcon, DocumentTextIcon, EyeIcon} from '@heroicons/vue/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, UserIcon, DocumentTextIcon, EyeIcon } from '@heroicons/vue/24/outline'
 
 export default {
   name: 'CollectionsView',
@@ -151,20 +250,16 @@ export default {
     DocumentTextIcon,
     EyeIcon
   },
-  props: {
-    access: {
-      type: String,
-      default: 'public'
-    }
-  },
   setup() {
     const router = useRouter()
     const store = useStore()
     const toast = useToast()
 
-    const collection = ref()
-    const isOwner = computed(() => collection.value?.owner?._id === store.state.auth.user?._id)
     const loading = ref(true)
+    const isProcessing = ref(false)
+    const isAddModalOpen = ref(false)
+    const categories = ref([])
+
     const collections = ref([])
     const pagination = ref({
       page: 1,
@@ -173,34 +268,87 @@ export default {
       pages: 1
     })
 
-    const isUserCollections = !isOwner.value
+    const newCollection = ref({
+      name: '',
+      description: '',
+      category: '',
+      privacy: 'public',
+      coverImage: null
+    })
 
     const loadCollections = async () => {
       try {
         loading.value = true
-        const serviceMethod = isUserCollections.value
-            ? CollectionService.getUserCollections
-            : CollectionService.getCollections
-
-        const params = {
+        const response = await CollectionService.getUserCollections({
           page: pagination.value.page,
           limit: pagination.value.limit
-        }
-
-        const response = await serviceMethod(params)
+        })
 
         collections.value = response.data.collections
         pagination.value = {
           page: response.data.page,
           limit: response.data.limit,
           total: response.data.total,
-          pages: response.data.pages
+          pages: Math.ceil(response.data.total / response.data.limit)
         }
-
       } catch (error) {
         handleError(error, 'Błąd pobierania kolekcji')
       } finally {
         loading.value = false
+      }
+    }
+
+    const openAddModal = async () => {
+      try {
+        const response = await CategoryService.getCategories()
+        categories.value = response.data.categories
+        isAddModalOpen.value = true
+      } catch (error) {
+        toast.error('Błąd ładowania kategorii')
+      }
+    }
+
+    const closeAddModal = () => {
+      isAddModalOpen.value = false
+      newCollection.value = {
+        name: '',
+        description: '',
+        category: '',
+        privacy: 'public',
+        coverImage: null
+      }
+    }
+
+    const handleFileUpload = (event) => {
+      newCollection.value.coverImage = event.target.files[0]
+    }
+
+    const submitCollection = async () => {
+      try {
+        isProcessing.value = true
+
+        const formData = new FormData()
+        formData.append('name', newCollection.value.name)
+        formData.append('description', newCollection.value.description)
+        formData.append('category', newCollection.value.category)
+        formData.append('privacy', newCollection.value.privacy)
+        if (newCollection.value.coverImage) {
+          formData.append('coverImage', newCollection.value.coverImage)
+        }
+
+        await CollectionService.addCollection(formData)
+        toast.success('Kolekcja utworzona pomyślnie!')
+
+        // Reset paginacji i przeładuj
+        pagination.value.page = 1
+        await loadCollections()
+
+        closeAddModal()
+      } catch (error) {
+        const message = error.response?.data?.message || 'Błąd podczas tworzenia kolekcji'
+        toast.error(message)
+      } finally {
+        isProcessing.value = false
       }
     }
 
@@ -213,12 +361,17 @@ export default {
     }
 
     const deleteCollection = async (id) => {
-      if (!confirm('Czy na pewno chcesz usunąć tę kolekcję? Ta operacja jest nieodwracalna.')) return
+      if (!confirm('Czy na pewno chcesz usunąć tę kolekcję?')) return
 
       try {
         await CollectionService.deleteCollection(id)
         collections.value = collections.value.filter(c => c._id !== id)
-        toast.success('Kolekcja została usunięta')
+        toast.success('Kolekcja usunięta')
+
+        if (collections.value.length === 0 && pagination.value.page > 1) {
+          pagination.value.page -= 1
+          await loadCollections()
+        }
       } catch (error) {
         handleError(error, 'Błąd usuwania kolekcji')
       }
@@ -227,11 +380,16 @@ export default {
     const handleError = (error, defaultMessage) => {
       const message = error.response?.data?.message || defaultMessage
       toast.error(message)
+
+      if (error.response?.status === 401) {
+        store.dispatch('auth/logout')
+        router.push('/login')
+      }
     }
 
     onMounted(async () => {
-      if (isUserCollections.value && !store.getters['auth/isLoggedIn']) {
-        await router.push({name: 'Login'})
+      if (!store.getters['auth/isAuthenticated']) {
+        await router.push({ name: 'Login' })
         return
       }
       await loadCollections()
@@ -241,7 +399,14 @@ export default {
       loading,
       collections,
       pagination,
-      isUserCollections,
+      isAddModalOpen,
+      categories,
+      newCollection,
+      isProcessing,
+      openAddModal,
+      closeAddModal,
+      handleFileUpload,
+      submitCollection,
       changePage,
       deleteCollection
     }
@@ -271,5 +436,17 @@ export default {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.input-field {
+  @apply w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors;
+}
+
+.radio {
+  @apply text-blue-600 focus:ring-blue-500;
+}
+
+.btn-gray {
+  @apply bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors;
 }
 </style>

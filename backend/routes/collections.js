@@ -87,15 +87,25 @@ router.get("/:id/attributes", async (req, res) => {
 
 router.get('/me', authenticateToken, async (req, res) => {
     try {
+        const { page = 1, limit = 10 } = req.query;
+
         const collections = await Collection.find({ owner: req.user._id })
             .populate('owner', 'username')
             .populate('category', 'name')
-            .sort('-createdAt');
+            .sort('-createdAt')
+            .limit(limit)
+            .skip((page - 1) * limit);
+
+        const total = await Collection.countDocuments({ owner: req.user._id });
 
         res.json({
             code: "USER_COLLECTIONS_FETCHED",
+            total,
+            page: Number(page),
+            pages: Math.ceil(total / limit),
             collections
         });
+
     } catch (error) {
         handleError(res, error, "Błąd pobierania kolekcji użytkownika");
     }

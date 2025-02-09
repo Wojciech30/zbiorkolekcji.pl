@@ -27,8 +27,8 @@ export default {
         return apiClient.delete(`/collections/${id}`);
     },
 
-    getUserCollections(userId) {
-        return apiClient.get(`/users/${userId}/collections`);
+    getUserCollections(params) {
+        return apiClient.get('/collections/me', {params: {page: params.page, limit: params.limit}});
     },
 
     getPopularCollections() {
