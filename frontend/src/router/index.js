@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import store from "@/store";
+import SingleItemView from "@/views/SingleItemView.vue";
 
 const routes = [
     {
@@ -42,6 +43,13 @@ const routes = [
         path: "/collections/:id",
         name: "SingleCollection",
         component: () => import("@/views/SingleCollectionView.vue"),
+        meta: { access: "public" },
+        props: true
+    },
+    {
+        path: '/items/:id',
+        name: 'SingleItem',
+        component: SingleItemView,
         meta: { access: "public" },
         props: true
     },

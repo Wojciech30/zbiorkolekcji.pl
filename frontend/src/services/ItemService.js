@@ -21,12 +21,4 @@ export default {
     getItemsByCollection(collectionId) {
         return apiClient.get(`/collections/${collectionId}/items`);
     },
-
-    searchItems(query) {
-        return apiClient.get('/items/search', { params: { q: query } });
-    },
-
-    validateItemAttributes(collectionId, attributes) {
-        return apiClient.post(`/collections/${collectionId}/validate`, attributes);
-    }
 };

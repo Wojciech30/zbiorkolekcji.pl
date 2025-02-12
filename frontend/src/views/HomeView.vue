@@ -49,7 +49,7 @@
             :key="collection._id"
             class="p-4 border rounded shadow hover:shadow-lg transition"
         >
-          <router-link :to="`/collection/${collection._id}`">
+          <router-link :to="`/collections/${collection._id}`">
             <h3 class="text-lg font-bold">{{ collection.name }}</h3>
             <p class="text-sm text-gray-500">{{ collection.description }}</p>
           </router-link>

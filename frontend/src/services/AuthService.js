@@ -26,11 +26,11 @@ export default {
         return apiClient.post('/auth/change-password', passwordData);
     },
 
-    refreshToken(refreshToken) { // ✅ Parametr przekazywany z store
+    refreshToken(refreshToken) {
         return apiClient.post('/auth/refresh', { refreshToken });
     },
 
-    logout(refreshToken) { //
+    logout(refreshToken) {
         return apiClient.post('/auth/logout', { refreshToken });
     }
 };

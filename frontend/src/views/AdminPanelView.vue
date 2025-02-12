@@ -10,27 +10,29 @@
     </div>
 
     <div v-else>
+      <!-- Zarządzanie kategoriami -->
       <section class="bg-white p-6 rounded-lg shadow-md mb-8">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-2xl font-semibold text-gray-700">Zarządzanie kategoriami</h2>
-          <button
-              @click="openAddModal"
-              class="btn-primary flex items-center gap-2"
-          >
+          <button @click="openAddModal" class="btn-primary flex items-center gap-2">
             <PlusIcon class="w-5 h-5" />
             Dodaj kategorię
           </button>
         </div>
 
+        <!-- Lista kategorii -->
         <ul class="space-y-2">
           <li
               v-for="category in categories"
-              :key="category._id"
+              :key="category._id || category.id"
               class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
           >
             <div class="space-y-1">
               <span class="font-medium text-gray-700 block">{{ category.name }}</span>
               <span class="text-sm text-gray-500 block">{{ category.description || "Brak opisu" }}</span>
+              <div class="text-xs text-gray-500">
+                <!-- Usunięto informację o wymagalności pola oraz pole wyświetlania -->
+              </div>
             </div>
             <div class="flex gap-3">
               <button
@@ -41,7 +43,7 @@
                 Edytuj
               </button>
               <button
-                  @click="deleteCategory(category._id)"
+                  @click="deleteCategory(category._id || category.id)"
                   class="text-red-600 hover:text-red-800 transition-colors"
                   :disabled="isProcessing"
               >
@@ -52,6 +54,7 @@
         </ul>
       </section>
 
+      <!-- Zarządzanie kolekcjami -->
       <section class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-2xl font-semibold mb-4 text-gray-700">Wszystkie kolekcje</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -70,15 +73,16 @@
         </div>
       </section>
 
+      <!-- Modal dodawania kategorii -->
       <div v-if="isAddModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
           <div class="p-6 border-b border-gray-200 flex-shrink-0">
             <h3 class="text-2xl font-semibold">Nowa kategoria</h3>
           </div>
-
           <form @submit.prevent="addCategory" class="flex-1 flex flex-col overflow-hidden">
             <div class="flex-1 min-h-0 overflow-y-auto p-6">
               <div class="space-y-4">
+                <!-- Nazwa i opis -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
                   <input
@@ -89,7 +93,6 @@
                       :disabled="isProcessing"
                   />
                 </div>
-
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
                   <textarea
@@ -98,10 +101,10 @@
                       :disabled="isProcessing"
                   ></textarea>
                 </div>
-
+                <!-- Usunięto opcję ustawiania wymagalności pola "Nazwa przedmiotu" -->
+                <!-- Atrybuty -->
                 <div>
                   <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
-
                   <div
                       v-for="(attr, index) in newCategoryData.attributes"
                       :key="index"
@@ -117,33 +120,31 @@
                             class="input-field"
                         />
                       </div>
-
                       <div>
                         <label class="block text-sm text-gray-600 mb-1">Typ *</label>
-                        <select
-                            v-model="attr.type"
-                            class="input-field"
-                            required
-                        >
+                        <select v-model="attr.type" class="input-field" required>
                           <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
                             {{ type.label }}
                           </option>
                         </select>
                       </div>
                     </div>
-
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center gap-2">
                       <input
                           type="checkbox"
                           v-model="attr.required"
-                          id="add-required"
+                          :id="`attr-required-${index}`"
                           class="checkbox"
                       />
-                      <label for="add-required" class="text-sm text-gray-600">Wymagane pole</label>
+                      <label :for="`attr-required-${index}`" class="text-sm text-gray-600">
+                        Wymagany atrybut
+                      </label>
                     </div>
-
+                    <!-- Dla typu select -->
                     <div v-if="attr.type === 'select'" class="space-y-2">
-                      <label class="block text-sm text-gray-600">Opcje (oddziel przecinkami) *</label>
+                      <label class="block text-sm text-gray-600">
+                        Opcje (oddziel przecinkami) *
+                      </label>
                       <input
                           v-model="attr.optionsInput"
                           type="text"
@@ -152,27 +153,26 @@
                           @change="updateAddOptions(index, $event.target.value)"
                       />
                     </div>
-
-                    <button
-                        type="button"
-                        @click="removeAddAttribute(index)"
-                        class="text-red-500 text-sm hover:text-red-700"
-                    >
+                    <!-- Usunięto radio button do wyboru pola wyświetlania -->
+                    <!-- Przycisk zmiany kolejności -->
+                    <div class="flex gap-2">
+                      <button type="button" @click="moveAddAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">
+                        ↑
+                      </button>
+                      <button type="button" @click="moveAddAttributeDown(index)" class="text-gray-500 hover:text-gray-700 text-sm">
+                        ↓
+                      </button>
+                    </div>
+                    <button type="button" @click="removeAddAttribute(index)" class="text-red-500 text-sm hover:text-red-700">
                       Usuń atrybut
                     </button>
                   </div>
-
-                  <button
-                      type="button"
-                      @click="addNewAttribute"
-                      class="btn-secondary mt-2"
-                  >
+                  <button type="button" @click="addNewAttribute" class="btn-secondary mt-2">
                     + Dodaj atrybut
                   </button>
                 </div>
               </div>
             </div>
-
             <div class="p-6 border-t border-gray-200 flex-shrink-0">
               <div class="flex justify-end gap-3">
                 <button
@@ -183,11 +183,7 @@
                 >
                   Anuluj
                 </button>
-                <button
-                    type="submit"
-                    class="btn-primary"
-                    :disabled="isProcessing"
-                >
+                <button type="submit" class="btn-primary" :disabled="isProcessing">
                   <span v-if="!isProcessing">Utwórz kategorię</span>
                   <Spinner v-else class="w-5 h-5 mx-auto" />
                 </button>
@@ -197,15 +193,16 @@
         </div>
       </div>
 
+      <!-- Modal edycji kategorii -->
       <div v-if="isEditModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
           <div class="p-6 border-b border-gray-200 flex-shrink-0">
             <h3 class="text-2xl font-semibold">Edytuj kategorię</h3>
           </div>
-
           <form @submit.prevent="saveEditedCategory" class="flex-1 flex flex-col overflow-hidden">
             <div class="flex-1 min-h-0 overflow-y-auto p-6">
               <div class="space-y-4">
+                <!-- Nazwa i opis -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
                   <input
@@ -216,7 +213,6 @@
                       :disabled="isProcessing"
                   />
                 </div>
-
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
                   <textarea
@@ -225,10 +221,10 @@
                       :disabled="isProcessing"
                   ></textarea>
                 </div>
-
+                <!-- Usunięto opcję ustawiania wymagalności pola "Nazwa przedmiotu" -->
+                <!-- Atrybuty -->
                 <div>
                   <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
-
                   <div
                       v-for="(attr, index) in editedCategory.attributes"
                       :key="index"
@@ -237,38 +233,28 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
-                        <input
-                            v-model="attr.name"
-                            type="text"
-                            required
-                            class="input-field"
-                        />
+                        <input v-model="attr.name" type="text" required class="input-field" />
                       </div>
-
                       <div>
                         <label class="block text-sm text-gray-600 mb-1">Typ *</label>
-                        <select
-                            v-model="attr.type"
-                            class="input-field"
-                            required
-                        >
+                        <select v-model="attr.type" class="input-field" required>
                           <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
                             {{ type.label }}
                           </option>
                         </select>
                       </div>
                     </div>
-
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center gap-2">
                       <input
                           type="checkbox"
                           v-model="attr.required"
-                          id="required"
+                          :id="`edit-attr-required-${index}`"
                           class="checkbox"
                       />
-                      <label for="required" class="text-sm text-gray-600">Wymagane pole</label>
+                      <label :for="`edit-attr-required-${index}`" class="text-sm text-gray-600">
+                        Wymagany atrybut
+                      </label>
                     </div>
-
                     <div v-if="attr.type === 'select'" class="space-y-2">
                       <label class="block text-sm text-gray-600">Opcje (oddziel przecinkami) *</label>
                       <input
@@ -279,42 +265,28 @@
                           @change="updateEditOptions(index, $event.target.value)"
                       />
                     </div>
-
-                    <button
-                        type="button"
-                        @click="removeEditAttribute(index)"
-                        class="text-red-500 text-sm hover:text-red-700"
-                    >
+                    <!-- Usunięto radio button do wyboru pola wyświetlania -->
+                    <!-- Przycisk zmiany kolejności -->
+                    <div class="flex gap-2">
+                      <button type="button" @click="moveEditAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">↑</button>
+                      <button type="button" @click="moveEditAttributeDown(index)" class="text-gray-500 hover:text-gray-700 text-sm">↓</button>
+                    </div>
+                    <button type="button" @click="removeEditAttribute(index)" class="text-red-500 text-sm hover:text-red-700">
                       Usuń atrybut
                     </button>
                   </div>
-
-                  <button
-                      type="button"
-                      @click="addEditAttribute"
-                      class="btn-secondary mt-2"
-                  >
+                  <button type="button" @click="addEditAttribute" class="btn-secondary mt-2">
                     + Dodaj atrybut
                   </button>
                 </div>
               </div>
             </div>
-
             <div class="p-6 border-t border-gray-200 flex-shrink-0">
               <div class="flex justify-end gap-3">
-                <button
-                    type="button"
-                    @click="closeEditModal"
-                    class="btn-gray"
-                    :disabled="isProcessing"
-                >
+                <button type="button" @click="closeEditModal" class="btn-gray" :disabled="isProcessing">
                   Anuluj
                 </button>
-                <button
-                    type="submit"
-                    class="btn-primary"
-                    :disabled="isProcessing"
-                >
+                <button type="submit" class="btn-primary" :disabled="isProcessing">
                   <span v-if="!isProcessing">Zapisz zmiany</span>
                   <Spinner v-else class="w-5 h-5 mx-auto" />
                 </button>
@@ -334,13 +306,13 @@ import { useStore } from 'vuex'
 import { useToast } from 'vue-toastification'
 import CategoryService from '@/services/CategoryService'
 import CollectionService from '@/services/CollectionService'
-import AppSpinner from "@/components/AppSpinner.vue"
+import Spinner from '@/components/AppSpinner.vue'
 import { PlusIcon } from '@heroicons/vue/24/outline'
 
 export default {
   name: 'AdminPanelView',
   components: {
-    Spinner: AppSpinner,
+    Spinner,
     PlusIcon
   },
   setup() {
@@ -353,13 +325,14 @@ export default {
     const loading = ref(true)
     const isProcessing = ref(false)
     const attributeTypes = [
-      { value: 'text', label: 'Tekst' },
+      { value: 'string', label: 'Tekst' },
       { value: 'number', label: 'Liczba' },
       { value: 'date', label: 'Data' },
       { value: 'boolean', label: 'Tak/Nie' },
       { value: 'select', label: 'Lista wyboru' }
     ]
 
+    // Modal dodawania kategorii – usunięto requireItemName i displayAttribute
     const isAddModalOpen = ref(false)
     const newCategoryData = ref({
       name: '',
@@ -367,15 +340,9 @@ export default {
       attributes: []
     })
 
+    // Modal edycji kategorii – usunięto requireItemName i displayAttribute
     const isEditModalOpen = ref(false)
     const editedCategory = ref(null)
-
-    const checkAdminAccess = () => {
-      if (!store.getters['auth/isAdmin']) {
-        toast.error('Brak uprawnień administratora')
-        router.push({ name: 'Home' })
-      }
-    }
 
     const loadData = async () => {
       try {
@@ -391,7 +358,6 @@ export default {
         collections.value = collectionsResponse.status === 'fulfilled'
             ? collectionsResponse.value.data.collections
             : []
-
       } catch (error) {
         console.error('Błąd ładowania danych:', error)
         toast.error('Problem z pobraniem danych')
@@ -400,6 +366,7 @@ export default {
       }
     }
 
+    // Modal dodawania kategorii
     const openAddModal = () => {
       newCategoryData.value = {
         name: '',
@@ -428,10 +395,19 @@ export default {
     }
 
     const updateAddOptions = (index, value) => {
-      newCategoryData.value.attributes[index].options = value
-          .split(',')
-          .map(opt => opt.trim())
-          .filter(opt => opt)
+      newCategoryData.value.attributes[index].options = value.split(',').map(opt => opt.trim()).filter(opt => opt)
+    }
+
+    const moveAddAttributeUp = (index) => {
+      if (index <= 0) return
+      const attrs = newCategoryData.value.attributes;
+      [attrs[index - 1], attrs[index]] = [attrs[index], attrs[index - 1]];
+    }
+
+    const moveAddAttributeDown = (index) => {
+      if (index >= newCategoryData.value.attributes.length - 1) return
+      const attrs = newCategoryData.value.attributes;
+      [attrs[index], attrs[index + 1]] = [attrs[index + 1], attrs[index]];
     }
 
     const addCategory = async () => {
@@ -447,18 +423,15 @@ export default {
               type: attr.type,
               required: attr.required
             }
-
             if (attr.type === 'select') {
               cleanedAttr.options = attr.optionsInput.split(',').map(o => o.trim())
             }
-
             return cleanedAttr
           })
         }
 
         const response = await CategoryService.createCategory(categoryData)
         categories.value = [...categories.value, response.data.category]
-
         toast.success('Kategoria dodana pomyślnie!')
         closeAddModal()
       } catch (error) {
@@ -468,9 +441,10 @@ export default {
       }
     }
 
+    // Modal edycji kategorii
     const openEditModal = (category) => {
       editedCategory.value = {
-        _id: category._id,
+        _id: category._id || category.id,
         name: category.name,
         description: category.description,
         attributes: category.attributes.map(attr => ({
@@ -501,10 +475,19 @@ export default {
     }
 
     const updateEditOptions = (index, value) => {
-      editedCategory.value.attributes[index].options = value
-          .split(',')
-          .map(opt => opt.trim())
-          .filter(opt => opt)
+      editedCategory.value.attributes[index].options = value.split(',').map(opt => opt.trim()).filter(opt => opt)
+    }
+
+    const moveEditAttributeUp = (index) => {
+      if (index <= 0) return
+      const attrs = editedCategory.value.attributes;
+      [attrs[index - 1], attrs[index]] = [attrs[index], attrs[index - 1]];
+    }
+
+    const moveEditAttributeDown = (index) => {
+      if (index >= editedCategory.value.attributes.length - 1) return
+      const attrs = editedCategory.value.attributes;
+      [attrs[index], attrs[index + 1]] = [attrs[index + 1], attrs[index]];
     }
 
     const saveEditedCategory = async () => {
@@ -524,13 +507,12 @@ export default {
           })
         }
 
-        const response = await CategoryService.updateCategory(
-            editedCategory.value._id,
-            updateData
-        )
+        const response = await CategoryService.updateCategory(editedCategory.value._id, updateData)
 
         categories.value = categories.value.map(c =>
-            c._id === editedCategory.value._id ? response.data.category : c
+            (c._id === editedCategory.value._id || c.id === editedCategory.value._id)
+                ? response.data.category
+                : c
         )
 
         closeEditModal()
@@ -548,8 +530,8 @@ export default {
       isProcessing.value = true
       try {
         await CategoryService.deleteCategory(id)
-        categories.value = categories.value.filter(c => c._id !== id)
-        collections.value = collections.value.filter(c => c.category?._id !== id)
+        categories.value = categories.value.filter(c => c._id !== id && c.id !== id)
+        collections.value = collections.value.filter(c => (c.category?._id !== id && c.category?.id !== id))
         toast.success('Kategoria i powiązane kolekcje zostały usunięte')
       } catch (error) {
         const message = error.response?.data?.message || 'Nie można usunąć kategorii w użyciu'
@@ -566,15 +548,26 @@ export default {
         VALIDATION_ERROR: 'Nieprawidłowe dane formularza'
       }
 
-      const code = error.response?.data?.code
-      const message = errorMap[code] || error.response?.data?.message || defaultMessage
-      toast.error(message)
-    }
+      const code = error.response?.data?.code;
+      const message = errorMap[code] || error.response?.data?.message || defaultMessage;
+      toast.error(message);
+      if (error.response?.status === 401) {
+        store.dispatch('auth/logout');
+        router.push('/login');
+      }
+    };
+
+    const checkAdminAccess = () => {
+      if (!store.getters['auth/isAdmin']) {
+        toast.error('Brak uprawnień administratora');
+        router.push({ name: 'Home' });
+      }
+    };
 
     onMounted(() => {
-      checkAdminAccess()
-      loadData()
-    })
+      checkAdminAccess();
+      loadData();
+    });
 
     return {
       categories,
@@ -591,6 +584,8 @@ export default {
       addNewAttribute,
       removeAddAttribute,
       updateAddOptions,
+      moveAddAttributeUp,
+      moveAddAttributeDown,
       addCategory,
       deleteCategory,
       openEditModal,
@@ -598,14 +593,15 @@ export default {
       addEditAttribute,
       removeEditAttribute,
       updateEditOptions,
+      moveEditAttributeUp,
+      moveEditAttributeDown,
       saveEditedCategory
-    }
+    };
   }
-}
+};
 </script>
 
 <style scoped>
-
 .input-field {
   @apply w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors;
 }
@@ -615,7 +611,7 @@ export default {
 }
 
 .btn-primary {
-  @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+  @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center;
 }
 
 .btn-secondary {
@@ -625,5 +621,4 @@ export default {
 .btn-gray {
   @apply bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors;
 }
-
 </style>

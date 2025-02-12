@@ -3,6 +3,9 @@ import Collection from "../models/Collection.js";
 import Item from "../models/Item.js";
 import authenticateToken from "../middleware/authenticateToken.js";
 import {validateAllowedUsers, verifyCollectionAccess, verifyCollectionOwnership} from "../middleware/collectionMiddleware.js";
+import User from "../models/User.js";
+import validateObjectId from "../middleware/validateObjectId.js";
+
 
 const router = express.Router();
 
@@ -19,16 +22,6 @@ const handleError = (res, error, defaultMessage) => {
         return res.status(400).json(response);
     }
     res.status(500).json(response);
-};
-
-const validateObjectId = (req, res, next) => {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        return res.status(400).json({
-            code: 'INVALID_ID_FORMAT',
-            message: 'Nieprawidłowy format identyfikatora'
-        });
-    }
-    next();
 };
 
 router.get("/", async (req, res) => {
@@ -202,6 +195,18 @@ router.delete("/:id",
     }
 );
 
+router.get("/:id/items", validateObjectId, async (req, res) => {
+    try {
+        const items = await Item.find({ parentCollection: req.params.id });
+        res.json({
+            code: "ITEMS_FETCHED",
+            items,
+        });
+    } catch (error) {
+        handleError(res, error, "Błąd pobierania przedmiotów");
+    }
+});
+
 router.get("/special/popular", async (req, res) => {
     try {
         const popularCollections = await Collection.find()
@@ -248,7 +253,6 @@ router.post("/:id/view", async (req, res) => {
     }
 });
 
-// Pobierz listę użytkowników z dostępem
 router.get('/:id/allowed-users',
     authenticateToken,
     verifyCollectionAccess,
@@ -268,51 +272,41 @@ router.get('/:id/allowed-users',
     }
 );
 
-// Dodaj użytkowników do listy dostępu
-router.post('/:id/allowed-users',
-    authenticateToken,
-    verifyCollectionOwnership,
-    async (req, res) => {
+router.post('/:id/allowed-users', authenticateToken, verifyCollectionOwnership, async (req, res) => {
         try {
-            const { userIds } = req.body;
+            const { username } = req.body;
 
-            // Walidacja wejścia
-            if (!Array.isArray(userIds) || userIds.length === 0) {
+            if (!username) {
                 return res.status(400).json({
-                    code: 'INVALID_USER_IDS',
-                    message: 'Należy podać tablicę ID użytkowników'
+                    code: "INVALID_USERNAME",
+                    message: "Należy podać nazwę użytkownika",
                 });
             }
 
-            // Sprawdź istnienie użytkowników
-            const existingUsers = await mongoose.model('User').countDocuments({
-                _id: { $in: userIds }
-            });
-
-            if (existingUsers !== userIds.length) {
+            // Szukamy użytkownika po nazwie
+            const user = await User.findOne({ username: username.trim() });
+            if (!user) {
                 return res.status(404).json({
-                    code: 'SOME_USERS_NOT_FOUND',
-                    message: 'Niektóre ID użytkowników są nieprawidłowe'
+                    code: "USER_NOT_FOUND",
+                    message: "Użytkownik o podanej nazwie nie istnieje",
                 });
             }
 
-            // Aktualizacja kolekcji
             const updatedCollection = await Collection.findByIdAndUpdate(
                 req.params.id,
                 {
-                    $addToSet: { allowedUsers: { $each: userIds } },
-                    $set: { privacy: 'private' }
+                    $addToSet: { allowedUsers: user._id },
+                    $set: { privacy: "private" },
                 },
                 { new: true }
-            ).populate('allowedUsers', 'username email');
+            ).populate("allowedUsers", "username email");
 
             res.json({
-                code: 'USERS_ADDED_TO_COLLECTION',
-                addedCount: userIds.length,
-                allowedUsers: updatedCollection.allowedUsers
+                code: "USER_ADDED_TO_COLLECTION",
+                allowedUsers: updatedCollection.allowedUsers,
             });
         } catch (error) {
-            handleError(res, error, 'Błąd dodawania użytkowników');
+            handleError(res, error, "Błąd dodawania użytkownika");
         }
     }
 );

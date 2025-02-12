@@ -47,33 +47,3 @@ export default async function authenticateToken(req, res, next) {
         });
     }
 }
-
-export async function verifyCollectionOwnership(req, res, next) {
-    try {
-        const collection = await Collection.findById(req.params.collectionId || req.body.collectionId)
-            .select("owner")
-            .lean();
-
-        if (!collection) {
-            return res.status(404).json({
-                code: "COLLECTION_NOT_FOUND",
-                message: "Kolekcja nie istnieje"
-            });
-        }
-
-        if (collection.owner.toString() !== req.user._id.toString() && req.user.role !== "admin") {
-            return res.status(403).json({
-                code: "FORBIDDEN_RESOURCE_ACCESS",
-                message: "Brak uprawnień do zasobu"
-            });
-        }
-
-        next();
-    } catch (error) {
-        console.error("Błąd weryfikacji dostępu:", error);
-        res.status(500).json({
-            code: "SERVER_ERROR",
-            message: "Błąd serwera podczas weryfikacji uprawnień"
-        });
-    }
-}

@@ -64,19 +64,24 @@ itemSchema.pre("save", async function(next) {
             .findById(this.parentCollection)
             .populate("category");
 
-        if (!collection) {
-            throw new Error("Kolekcja nie istnieje");
-        }
+        const categoryAttributes = new Map(
+            collection.category.attributes.map(attr => [attr.name, attr])
+        );
 
-        const categoryAttributes = collection.category.attributes;
-        const attributeNames = Array.from(this.attributes.keys());
+        for (const [attrName, attrValue] of this.attributes) {
+            const attrDef = categoryAttributes.get(attrName);
 
-        // Walidacja wymaganych atrybutów
-        categoryAttributes.forEach(attr => {
-            if (attr.required && !attributeNames.includes(attr.name)) {
-                throw new Error(`Brak wymaganego atrybutu: ${attr.name}`);
+            if (!attrDef) {
+                throw new Error(`Nieznany atrybut: ${attrName}`);
             }
-        });
+
+            if (typeof attrValue.value !== attrDef.type && attrDef.type !== 'select') {
+                throw new Error(
+                    `Nieprawidłowy typ dla atrybutu ${attrName}. ` +
+                    `Oczekiwano ${attrDef.type}, otrzymano ${typeof attrValue.value}`
+                );
+            }
+        }
 
         next();
     } catch (error) {

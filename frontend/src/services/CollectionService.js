@@ -31,6 +31,10 @@ export default {
         return apiClient.get('/collections/me', {params: {page: params.page, limit: params.limit}});
     },
 
+    addAllowedUserByUsername(collectionId, username) {
+        return apiClient.post(`/collections/${collectionId}/allowed-users`, { username });
+    },
+
     getPopularCollections() {
         return apiClient.get('/collections/special/popular');
     },

@@ -54,7 +54,7 @@
             class="p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
         >
           <router-link
-              :to="`/collection/${collection._id}`"
+              :to="`/collections/${collection._id}`"
               class="block group"
           >
             <div class="mb-4 relative">
